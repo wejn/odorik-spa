@@ -101,6 +101,7 @@ menu =
         , width <| maximum 800 fill
         , padding 10
         , spacing 10
+        , Background.color <| rgb255 255 255 255
         ]
         [ el
             -- "logo" element
@@ -122,24 +123,25 @@ view storage m =
     , attributes = [width fill, height fill, inFront menu]
     , element =
         el [ centerX , centerY, padding 50 ] <|
-            paragraph
-            []
-            [ Element.paragraph
+            column [ spacing 40 ]
+            [ paragraph
               []
-              [ text ("Local storage " ++ (Maybe.withDefault "" m.number)) ]
-            -- how the hell do I put this on the next line?
-            , Input.button
-              buttonStyle
-              { onPress = Just Decrement
-              , label = Element.text "-"
-              }
-            , Element.paragraph
-              [ Font.size 32 ]
-              [ Element.text (" " ++ String.fromInt storage.counter ++ " ") ]
-            , Input.button
-              buttonStyle
-              { onPress = Just Increment
-              , label = Element.text "+"
-              }
-            ]
+              [ text ("Number: " ++ (Maybe.withDefault "" m.number)) ]
+              -- how the hell do I put this on the next line?
+            , row
+              [ width fill ]
+              [  Input.button
+                buttonStyle
+                { onPress = Just Decrement
+                , label = Element.text "-"
+                }
+              , el [width fill] <|
+                  el [ Font.size 32, centerX ] <|
+                    text (" " ++ String.fromInt storage.counter ++ " ")
+              , Input.button
+                buttonStyle
+                { onPress = Just Increment
+                , label = Element.text "+"
+                }
+              ] ]
     }
