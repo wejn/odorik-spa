@@ -31,7 +31,8 @@ page shared req =
 
 
 type alias Model =
-    { number : Maybe String }
+    { number : Maybe String
+    , menu : Element Msg }
 
 
 parseNumber : Request -> Maybe String
@@ -44,7 +45,7 @@ parseNumber req =
 
 init : Request -> ( Model, Cmd Msg )
 init req =
-    ( { number = parseNumber req}, Cmd.none )
+    ( { number = parseNumber req, menu = Shared.menuGen req}, Cmd.none )
 
 
 
@@ -94,33 +95,10 @@ buttonStyle =
         , Font.color <| rgb255 0 0 0 ]
     ]
 
-menu : Element msg
-menu =
-    row
-        [ centerX
-        , width <| maximum 800 fill
-        , padding 10
-        , spacing 10
-        , Background.color <| rgb255 255 255 255
-        ]
-        [ el
-            -- "logo" element
-            [ width <| fillPortion 1
-            , height <| px 80
-            ]
-            <| image [ Border.rounded 8, clip, width <| px 80, height <| px 80 ]
-                { src = "icon.png"
-                , description = "odorik icon"
-                }
-        , el [ width <| fillPortion 1, alignRight ] <| text "Balance"
-        , el [ width <| fillPortion 1, alignRight ] <| text "Callback"
-        , el [ width <| fillPortion 1, alignRight ] <| text "Settings"
-        ]
-
 view : Storage -> Model -> View Msg
 view storage m =
     { title = "Homepage"
-    , attributes = [width fill, height fill, inFront menu]
+    , attributes = [width fill, height fill, inFront m.menu]
     , element =
         el [ centerX , centerY, padding 50 ] <|
             column [ spacing 40 ]
