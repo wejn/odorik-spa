@@ -12,7 +12,7 @@ port module Storage exposing
 
 import Json.Decode as Json
 import Json.Encode as Encode
-import Time
+import OdorikApi
 
 
 
@@ -31,12 +31,7 @@ port load : (Json.Value -> msg) -> Sub msg
 
 type alias Storage =
     { counter : Int
-    , user : String
-    , pass : String
-    , line : Int
-    , caller : String
-    , balance : String
-    , balanceTs : Time.Posix
+    , odorikApi : OdorikApi.Model
     }
 
 
@@ -48,12 +43,7 @@ toJson : Storage -> Json.Value
 toJson storage =
     Encode.object
         [ ( "counter", Encode.int storage.counter )
-        , ( "user", Encode.string storage.user )
-        , ( "pass", Encode.string storage.pass )
-        , ( "line", Encode.int storage.line )
-        , ( "caller", Encode.string storage.caller )
-        , ( "balance", Encode.string storage.balance )
-        , ( "balanceTs", Encode.int (Time.posixToMillis storage.balanceTs) )
+        , ( "odorikapi", OdorikApi.encoder storage.odorikApi )
         ]
 
 
@@ -71,31 +61,14 @@ fromJson json =
 init : Storage
 init =
     { counter = 0
-    , user = "888"
-    , pass = "888"
-    , line = 111
-    , caller = "+420 800 123 456"
-    , balance = "0.00"
-    , balanceTs = (Time.millisToPosix 0)
+    , odorikApi = OdorikApi.init
     }
-
-decodeTime : Json.Decoder Time.Posix
-decodeTime =
-    Json.int
-        |> Json.andThen
-            (\ms -> Json.succeed <| Time.millisToPosix ms )
-
 
 decoder : Json.Decoder Storage
 decoder =
-    Json.map7 Storage
+    Json.map2 Storage
         (Json.field "counter" Json.int)
-        (Json.field "user" Json.string)
-        (Json.field "pass" Json.string)
-        (Json.field "line" Json.int)
-        (Json.field "caller" Json.string)
-        (Json.field "balance" Json.string)
-        (Json.field "balanceTs" decodeTime)
+        (Json.field "odorikapi" OdorikApi.decoder)
 
 -- Updating storage
 

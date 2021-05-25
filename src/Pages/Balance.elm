@@ -8,10 +8,12 @@ import Element.Background as Background
 import Html
 import Html.Events
 import Http
+import OdorikApi
 import Page
 import Request exposing (Request)
 import Shared
 import Storage exposing (Storage)
+import Task
 import Time
 import View exposing (View)
 
@@ -27,48 +29,74 @@ page shared req =
 type State
     = Loading
     | Success String
-    | Failure
+    | Failure String
 
 type alias Model =
     { menu : Element Msg
     , state : State
-    , balance : String
-    , balanceTs : Time.Posix }
+    , api : OdorikApi.Model
+    }
 
 init : Request -> Storage -> ( Model, Cmd Msg )
 init req storage =
     ( { menu = Shared.menuGen req
       , state = Loading
-      , balance = storage.balance
-      , balanceTs = storage.balanceTs
-      }, loadBalance storage )
+      , api = storage.odorikApi
+      }, Cmd.batch [ Task.perform (\_ -> GetBalance) Time.now ] )
 
 type Msg
     = None
-    | GotBalance (Result Http.Error String)
+    | GetBalance
+    | GotBalance OdorikApi.ApiResponse
 
 
 update : Storage -> Msg -> Model -> ( Model, Cmd Msg )
 update storage msg model =
     case msg of
         None -> ( model , Cmd.none )
+        GetBalance -> ({ model | state = Loading }, OdorikApi.getBalance model.api GotBalance)
         GotBalance result ->
             case result of
                 Ok fullText ->
-                    ({ model | state = (Success fullText), balance = fullText }, Cmd.none) -- FIXME: update refresh TS
-                Err _ ->
-                    ({ model | state = Failure }, Cmd.none)
+                    ({ model | state = Success fullText }, Cmd.none)
+                Err err ->
+                    ({ model | state = Failure (OdorikApi.errorToString err) }, Cmd.none)
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
 
-balanceForModel : Model -> String
+balanceForModel : Model -> (String, String)
 balanceForModel m =
     case m.state of
-        Loading -> "Loading ..."
-        Success _ -> m.balance
-        Failure -> "Failed to fetch."
+        Loading -> ("...", "Loading ...")
+        Success b -> (b, "")
+        Failure err -> ("Failed.", "error: " ++ err)
+
+balanceHelper : Model -> List (Element Msg)
+balanceHelper m =
+    (balanceForModel m) |> \(title, explanation) ->
+        [ paragraph
+            [Font.size 48, Font.center]
+            [ text title ]
+        , paragraph
+            [Font.size 24, Font.center]
+            [ text explanation ]
+        , paragraph
+            [ Font.center ]
+            [ Input.button
+                [ padding 10
+                , Border.width 2
+                , Border.rounded 16
+                , Border.color <| rgb255 0x50 0x50 0x50
+                , Background.color <| rgb255 0xbb 0xdd 0xff
+                , Font.color <| rgb255 255 255 255
+                ]
+                { onPress = Just GetBalance
+                , label = text "Refresh"
+                }
+            ]
+        ]
 
 view : Storage -> Model -> View Msg
 view storage m =
@@ -76,15 +104,5 @@ view storage m =
     , attributes = [width fill, height fill, inFront m.menu]
     , element =
         el [ centerX , centerY, padding 50 ] <|
-            column [ spacing 40 ]
-            [ paragraph
-              [Font.size 48]
-              [ text (balanceForModel m) ]
-            ]
+            column [ spacing 40 ] (balanceHelper m)
     }
-
-loadBalance : Storage -> Cmd Msg
-loadBalance storage =
-    Http.get
-        { url = Shared.apiUrlFromCreds storage "balance" -- FIXME: mod the time, to force refresh
-        , expect = Http.expectString GotBalance }

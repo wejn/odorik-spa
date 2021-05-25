@@ -6,7 +6,6 @@ module Shared exposing
     , subscriptions
     , update
     , menuGen
-    , apiUrlFromCreds
     )
 
 import Element exposing (..)
@@ -80,10 +79,3 @@ menuGen req =
             { url = (Route.toHref Route.Settings)
             , label = el [ width <| fillPortion 1, alignRight ] <| text "Settings" }
         ]
-
-apiUrlFromCreds : Storage -> String -> String
-apiUrlFromCreds storage api =
-    case (storage.user, storage.pass) of
-        ("888", "888") -> ("https://wejn.com/odorik_test_api___/" ++ api ++ "?user=" ++ storage.user ++ "&password=" ++ storage.pass)
-        _ -> ("https://www.odorik.cz/api/v1/" ++ api ++ "?user=" ++ storage.user ++ "&password=" ++ storage.pass)
-        -- FIXME: this is SO bad, but it's a start
