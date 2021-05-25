@@ -4,7 +4,6 @@ module OdorikApi exposing
     , init
     , decoder
     , encoder
-    , apiUrlFromCreds
     , getBalance
     , errorToString
     )
@@ -57,9 +56,9 @@ serverFromCreds m =
         ("888", "888") -> "https://wejn.com/odorik_test_api___"
         _ -> "https://www.odorik.cz/api/v1"
 
-apiUrlFromCreds : Model -> String -> String
-apiUrlFromCreds m api =
-    UB.custom (UB.CrossOrigin (serverFromCreds m)) [api] [UB.string "user" m.user, UB.string "password" m.pass] Nothing
+apiUrlFromCreds : Model -> String -> List (UB.QueryParameter) -> String
+apiUrlFromCreds m api qp =
+    UB.custom (UB.CrossOrigin (serverFromCreds m)) [api] ([UB.string "user" m.user, UB.string "password" m.pass] ++ qp) Nothing
 
 errorToString : Http.Error -> String
 errorToString error =
@@ -79,9 +78,12 @@ errorToString error =
         Http.BadBody errorMessage ->
             errorMessage
 
-expectApiResponse : (Result Http.Error String -> msg) -> Http.Expect msg
+expectApiResponse : (ApiResponse -> msg) -> Http.Expect msg
 expectApiResponse toMsg =
-    Http.expectStringResponse toMsg <|
+    Http.expectStringResponse toMsg apiResolver
+
+apiResolver : Http.Response String -> ApiResponse
+apiResolver =
         \response ->
             case response of
                 Http.BadUrl_ url ->
@@ -111,6 +113,17 @@ getBalance model msg =
         False ->
             Cmd.batch [Task.perform (\_ -> msg (Err (Http.BadBody "not logged in"))) Time.now]
         True ->
+            {-
             Http.get
-                { url = apiUrlFromCreds model "balance" -- FIXME: mod the time, to force refresh
-                , expect = expectApiResponse msg }
+               { url = apiUrlFromCreds model "balance" [] -- FIXME: mod the time, to force refresh
+               , expect = expectApiResponse msg }
+            -}
+            Task.attempt msg (Time.now |> Task.andThen (\time ->
+                Http.task
+                    { body = Http.emptyBody
+                    , timeout = Nothing
+                    , headers = []
+                    , method = "GET"
+                    , url = (apiUrlFromCreds model "balance") [UB.int "t" (Time.posixToMillis time)]
+                    , resolver = Http.stringResolver apiResolver
+                    } ) )
