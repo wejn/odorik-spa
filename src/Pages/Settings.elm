@@ -22,7 +22,7 @@ page : Shared.Model -> Request -> Page.With Model Msg
 page shared req =
     Page.element
         { init = init req shared.storage
-        , update = update shared.storage
+        , update = update req shared.storage
         , view = view shared.storage
         , subscriptions = subscriptions
         }
@@ -62,10 +62,11 @@ type Msg
     | ChangePassword String
     | ChangeUserName String
     | UsernameEnter
+    | StorageUpdated Storage
 
 
-update : Storage -> Msg -> Model -> ( Model, Cmd Msg )
-update storage msg model =
+update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
+update req storage msg model =
     case msg of
         None -> ( model , Cmd.none )
         Logout -> ( { model | state = NeedLogin } , Storage.logout storage )
@@ -75,11 +76,12 @@ update storage msg model =
         FinishLogin -> ( { model | state = LoggedIn } , Cmd.none )
         ChangeUserName u -> ( { model | username = u } , Cmd.none )
         ChangePassword p -> ( { model | password = p } , Cmd.none )
-        UsernameEnter -> ( model, Task.attempt (\_ -> None) (Dom.focus "password") ) -- FIXME: Implement
+        UsernameEnter -> ( model, Task.attempt (\_ -> None) (Dom.focus "password") )
+        StorageUpdated s -> init req s
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Storage.onChange StorageUpdated
 
 loginPage : Model -> Element Msg
 loginPage model =

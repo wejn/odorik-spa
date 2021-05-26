@@ -14,7 +14,6 @@ import Page
 import Request exposing (Request)
 import Shared
 import Storage exposing (Storage)
-import Task
 import View exposing (View)
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -41,11 +40,8 @@ init : Request -> Storage -> ( Model, Cmd Msg )
 init req storage =
     case OdorikApi.haveValidCredentials storage.odorikApi of
         True ->
-            ( { menu = Shared.menuGen req
-              , state = Loading
-              }
-            , Task.succeed GetBalance |> Task.perform identity
-            )
+            update req storage (GetBalance) <|
+                { menu = Shared.menuGen req , state = Loading }
         False ->
             ( { menu = Shared.menuGen req
               , state = NeedLogin
@@ -58,6 +54,7 @@ type Msg
     | Login
     | GetBalance
     | GotBalance OdorikApi.ApiResponse
+    | StorageUpdated Storage
 
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
@@ -72,10 +69,11 @@ update req storage msg model =
                     ({ model | state = Success fullText }, Cmd.none)
                 Err err ->
                     ({ model | state = Failure (OdorikApi.errorToString err) }, Cmd.none)
+        StorageUpdated s -> init req s
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Storage.onChange StorageUpdated
 
 balanceHelper : Model -> List (Element Msg)
 balanceHelper m =
