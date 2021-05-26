@@ -68,7 +68,7 @@ update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
 update req storage msg model =
     case msg of
         None -> ( model , Cmd.none )
-        Login -> ( model, Request.pushRoute Route.Home_ req ) -- FIXME: better target
+        Login -> ( model, Request.pushRoute Route.Settings req )
         GetBalance -> ({ model | state = Loading }, OdorikApi.getBalance model.api GotBalance)
         GotBalance result ->
             case result of
