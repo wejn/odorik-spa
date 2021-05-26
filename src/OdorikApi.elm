@@ -7,6 +7,10 @@ module OdorikApi exposing
     , getBalance
     , errorToString
     , haveValidCredentials
+    , getUser
+    , logout
+    , verifyCredentials
+    , login
     )
 
 import Http
@@ -128,3 +132,16 @@ getBalance model msg =
                     , url = (apiUrlFromCreds model "balance") [UB.int "t" (Time.posixToMillis time)]
                     , resolver = Http.stringResolver apiResolver
                     } ) )
+
+getUser : Model -> String
+getUser m = m.user
+
+logout : Model -> Model
+logout m = { m | user = "", pass = "" }
+
+login : Model -> String -> String -> Model
+login m u p = { m | user = u, pass = p }
+
+verifyCredentials : (ApiResponse -> msg) -> String -> String -> Cmd msg
+verifyCredentials msg user pass =
+    getBalance { init | user = user, pass = pass } msg

@@ -1,6 +1,7 @@
 port module Storage exposing
     ( Storage, fromJson, onChange
-    , increment, decrement
+    , increment, decrement, logout
+    , login
     )
 
 {-|
@@ -13,6 +14,7 @@ port module Storage exposing
 import Json.Decode as Json
 import Json.Encode as Encode
 import OdorikApi
+import Task
 
 
 
@@ -86,7 +88,19 @@ decrement storage =
         |> toJson
         |> save
 
+logout : Storage -> Cmd msg
+logout storage =
+    { storage | odorikApi = OdorikApi.logout storage.odorikApi }
+        |> toJson
+        |> save
 
+login : Storage -> msg -> String -> String -> Cmd msg
+login storage msg user pass =
+    Cmd.batch
+        [ { storage | odorikApi = OdorikApi.login storage.odorikApi user pass }
+            |> toJson
+            |> save
+        , Task.succeed msg |> Task.perform identity ]
 
 -- LISTENING FOR STORAGE UPDATES
 

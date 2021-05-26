@@ -6,19 +6,22 @@ module Shared exposing
     , subscriptions
     , update
     , menuGen
+    , onEnter
     )
 
 import Element exposing (..)
 import Element.Border as Border
 import Element.Background as Background
 import Gen.Route as Route
-import Json.Decode as Json
+import Html exposing (Html)
+import Html.Events
+import Json.Decode as Decode
 import Request exposing (Request)
 import Storage exposing (Storage)
 
 
 type alias Flags =
-    Json.Value
+    Decode.Value
 
 
 type alias Model =
@@ -79,3 +82,18 @@ menuGen req =
             { url = (Route.toHref Route.Settings)
             , label = el [ width <| fillPortion 1, alignRight ] <| text "Settings" }
         ]
+
+onEnter : msg -> Element.Attribute msg
+onEnter msg =
+    Element.htmlAttribute
+        (Html.Events.on "keyup"
+            (Decode.field "key" Decode.string
+                |> Decode.andThen
+                    (\key ->
+                        if key == "Enter" then
+                            Decode.succeed msg
+                        else
+                            Decode.fail "Not the enter key"
+                    )
+            )
+        )

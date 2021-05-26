@@ -15,7 +15,6 @@ import Request exposing (Request)
 import Shared
 import Storage exposing (Storage)
 import Task
-import Time
 import View exposing (View)
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -36,7 +35,6 @@ type State
 type alias Model =
     { menu : Element Msg
     , state : State
-    , api : OdorikApi.Model
     }
 
 init : Request -> Storage -> ( Model, Cmd Msg )
@@ -45,14 +43,12 @@ init req storage =
         True ->
             ( { menu = Shared.menuGen req
               , state = Loading
-              , api = storage.odorikApi
               }
-            , Cmd.batch [ Task.perform (\_ -> GetBalance) Time.now ]
+            , Task.succeed GetBalance |> Task.perform identity
             )
         False ->
             ( { menu = Shared.menuGen req
               , state = NeedLogin
-              , api = storage.odorikApi
               }
             , Cmd.none
             )
@@ -69,7 +65,7 @@ update req storage msg model =
     case msg of
         None -> ( model , Cmd.none )
         Login -> ( model, Request.pushRoute Route.Settings req )
-        GetBalance -> ({ model | state = Loading }, OdorikApi.getBalance model.api GotBalance)
+        GetBalance -> ({ model | state = Loading }, OdorikApi.getBalance storage.odorikApi GotBalance)
         GotBalance result ->
             case result of
                 Ok fullText ->
