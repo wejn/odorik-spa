@@ -116,7 +116,7 @@ getBalance : Model -> (ApiResponse -> msg) -> Cmd msg
 getBalance model msg =
     case haveValidCredentials model of
         False ->
-            Cmd.batch [Task.perform (\_ -> msg (Err (Http.BadBody "not logged in"))) Time.now]
+            Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
         True ->
             {-
             Http.get
@@ -144,4 +144,9 @@ login m u p = { m | user = u, pass = p }
 
 verifyCredentials : (ApiResponse -> msg) -> String -> String -> Cmd msg
 verifyCredentials msg user pass =
-    getBalance { init | user = user, pass = pass } msg
+    let
+        m = { init | user = user, pass = pass }
+    in
+        case haveValidCredentials m of
+            False -> Task.succeed (msg (Err (Http.BadBody "empty credentials"))) |> Task.perform identity
+            True -> getBalance m msg
