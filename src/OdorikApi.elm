@@ -6,6 +6,7 @@ module OdorikApi exposing
     , encoder
     , getBalance
     , errorToString
+    , haveValidCredentials
     )
 
 import Http

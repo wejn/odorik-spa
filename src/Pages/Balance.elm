@@ -5,6 +5,7 @@ import Element.Input as Input
 import Element.Border as Border
 import Element.Font as Font
 import Element.Background as Background
+import Gen.Route as Route
 import Html
 import Html.Events
 import Http
@@ -21,13 +22,14 @@ page : Shared.Model -> Request -> Page.With Model Msg
 page shared req =
     Page.element
         { init = init req shared.storage
-        , update = update shared.storage
+        , update = update req shared.storage
         , view = view shared.storage
         , subscriptions = subscriptions
         }
 
 type State
     = Loading
+    | NeedLogin
     | Success String
     | Failure String
 
@@ -39,21 +41,34 @@ type alias Model =
 
 init : Request -> Storage -> ( Model, Cmd Msg )
 init req storage =
-    ( { menu = Shared.menuGen req
-      , state = Loading
-      , api = storage.odorikApi
-      }, Cmd.batch [ Task.perform (\_ -> GetBalance) Time.now ] )
+    case OdorikApi.haveValidCredentials storage.odorikApi of
+        True ->
+            ( { menu = Shared.menuGen req
+              , state = Loading
+              , api = storage.odorikApi
+              }
+            , Cmd.batch [ Task.perform (\_ -> GetBalance) Time.now ]
+            )
+        False ->
+            ( { menu = Shared.menuGen req
+              , state = NeedLogin
+              , api = storage.odorikApi
+              }
+            , Cmd.none
+            )
 
 type Msg
     = None
+    | Login
     | GetBalance
     | GotBalance OdorikApi.ApiResponse
 
 
-update : Storage -> Msg -> Model -> ( Model, Cmd Msg )
-update storage msg model =
+update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
+update req storage msg model =
     case msg of
         None -> ( model , Cmd.none )
+        Login -> ( model, Request.pushRoute Route.Home_ req ) -- FIXME: better target
         GetBalance -> ({ model | state = Loading }, OdorikApi.getBalance model.api GotBalance)
         GotBalance result ->
             case result of
@@ -66,16 +81,18 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
 
-balanceForModel : Model -> (String, String)
-balanceForModel m =
-    case m.state of
-        Loading -> ("...", "Loading ...")
-        Success b -> (b, "")
-        Failure err -> ("Failed.", "error: " ++ err)
-
 balanceHelper : Model -> List (Element Msg)
 balanceHelper m =
-    (balanceForModel m) |> \(title, explanation) ->
+    let
+        login = { label = text "Login", onPress = Just Login }
+        refresh = { label = text "Refresh", onPress = Just GetBalance }
+        (title, explanation, button) =
+            case m.state of
+                NeedLogin -> ("Not logged in.", "", login)
+                Loading -> ("...", "Loading ...", refresh)
+                Success b -> (b, "", refresh)
+                Failure err -> ("Failed.", "error: " ++ err, refresh)
+    in
         [ paragraph
             [Font.size 48, Font.center]
             [ text title ]
@@ -92,9 +109,7 @@ balanceHelper m =
                 , Background.color <| rgb255 0xbb 0xdd 0xff
                 , Font.color <| rgb255 255 255 255
                 ]
-                { onPress = Just GetBalance
-                , label = text "Refresh"
-                }
+                button
             ]
         ]
 
