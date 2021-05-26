@@ -54,7 +54,6 @@ type Msg
     | Login
     | GetBalance
     | GotBalance OdorikApi.ApiResponse
-    | StorageUpdated Storage
 
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
@@ -69,11 +68,10 @@ update req storage msg model =
                     ({ model | state = Success fullText }, Cmd.none)
                 Err err ->
                     ({ model | state = Failure (OdorikApi.errorToString err) }, Cmd.none)
-        StorageUpdated s -> init req s
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Storage.onChange StorageUpdated
+    Sub.none
 
 balanceHelper : Model -> List (Element Msg)
 balanceHelper m =

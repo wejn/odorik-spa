@@ -62,7 +62,6 @@ type Msg
     | ChangePassword String
     | ChangeUserName String
     | UsernameEnter
-    | StorageUpdated Storage
 
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
@@ -77,11 +76,10 @@ update req storage msg model =
         ChangeUserName u -> ( { model | username = u } , Cmd.none )
         ChangePassword p -> ( { model | password = p } , Cmd.none )
         UsernameEnter -> ( model, Task.attempt (\_ -> None) (Dom.focus "password") )
-        StorageUpdated s -> init req s
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Storage.onChange StorageUpdated
+    Sub.none
 
 loginPage : Model -> Element Msg
 loginPage model =
