@@ -1,13 +1,13 @@
 port module Storage exposing
     ( Storage, fromJson, onChange
-    , increment, decrement, logout
+    , logout
     , login
     )
 
 {-|
 
 @docs Storage, fromJson, onChange
-@docs increment, decrement
+@docs logout, login
 
 -}
 
@@ -32,8 +32,7 @@ port load : (Json.Value -> msg) -> Sub msg
 
 
 type alias Storage =
-    { counter : Int
-    , odorikApi : OdorikApi.Model
+    { odorikApi : OdorikApi.Model
     }
 
 
@@ -44,8 +43,7 @@ type alias Storage =
 toJson : Storage -> Json.Value
 toJson storage =
     Encode.object
-        [ ( "counter", Encode.int storage.counter )
-        , ( "odorikapi", OdorikApi.encoder storage.odorikApi )
+        [ ( "odorikapi", OdorikApi.encoder storage.odorikApi )
         ]
 
 
@@ -62,31 +60,16 @@ fromJson json =
 
 init : Storage
 init =
-    { counter = 0
-    , odorikApi = OdorikApi.init
+    { odorikApi = OdorikApi.init
     }
 
 decoder : Json.Decoder Storage
 decoder =
-    Json.map2 Storage
-        (Json.field "counter" Json.int)
+    Json.map Storage
         (Json.field "odorikapi" OdorikApi.decoder)
 
 -- Updating storage
 
-
-increment : Storage -> Cmd msg
-increment storage =
-    { storage | counter = storage.counter + 1 }
-        |> toJson
-        |> save
-
-
-decrement : Storage -> Cmd msg
-decrement storage =
-    { storage | counter = storage.counter - 1 }
-        |> toJson
-        |> save
 
 logout : Storage -> Cmd msg
 logout storage =

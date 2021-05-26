@@ -45,7 +45,9 @@ parseNumber req =
 
 init : Request -> ( Model, Cmd Msg )
 init req =
-    ( { number = parseNumber req, menu = Shared.menuGen req}, Cmd.none )
+    ( { number = parseNumber req
+      , menu = Shared.menuGen req}
+    , Cmd.none )
 
 
 
@@ -53,23 +55,13 @@ init req =
 
 
 type Msg
-    = Increment
-    | Decrement
+    = None
 
 
 update : Storage -> Msg -> Model -> ( Model, Cmd Msg )
 update storage msg model =
     case msg of
-        Increment ->
-            ( model
-            , Storage.increment storage
-            )
-
-        Decrement ->
-            ( model
-            , Storage.decrement storage
-            )
-
+        None -> ( model , Cmd.none )
 
 
 -- SUBSCRIPTIONS
@@ -83,18 +75,6 @@ subscriptions _ =
 
 -- VIEW
 
-buttonStyle =
-    [ padding 20
-    , Border.width 2
-    , Border.rounded 16
-    , Border.color <| rgb255 0x50 0x50 0x50
-    , Background.color <| rgb255 0xbb 0xdd 0xff
-    , Font.color <| rgb255 255 255 255
-    , mouseOver
-        [ Background.color <| rgb255 255 255 255
-        , Font.color <| rgb255 0 0 0 ]
-    ]
-
 view : Storage -> Model -> View Msg
 view storage m =
     { title = "Homepage"
@@ -104,22 +84,9 @@ view storage m =
             column [ spacing 40 ]
             [ paragraph
               []
-              [ text ("Number: " ++ (Maybe.withDefault "" m.number)) ]
-              -- how the hell do I put this on the next line?
-            , row
-              [ width fill ]
-              [  Input.button
-                buttonStyle
-                { onPress = Just Decrement
-                , label = Element.text "-"
-                }
-              , el [width fill] <|
-                  el [ Font.size 32, centerX ] <|
-                    text (" " ++ String.fromInt storage.counter ++ " ")
-              , Input.button
-                buttonStyle
-                { onPress = Just Increment
-                , label = Element.text "+"
-                }
-              ] ]
+              [ text "Here be homepage." ]
+            , paragraph
+              []
+              [ text (Maybe.withDefault "" m.number) ]
+            ]
     }
