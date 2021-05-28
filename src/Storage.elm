@@ -4,6 +4,7 @@ port module Storage exposing
     , login
     , saveCaller
     , saveLine
+    , saveSpeedDials
     )
 
 {-|
@@ -96,10 +97,18 @@ saveLine storage msg line =
             |> save
         , Task.succeed msg |> Task.perform identity ]
 
-saveCaller : Storage -> msg -> Maybe String -> Cmd msg
+saveCaller : Storage -> msg -> Maybe OdorikApi.SpeedDial -> Cmd msg
 saveCaller storage msg caller =
     Cmd.batch
         [ { storage | odorikApi = OdorikApi.saveCaller storage.odorikApi caller }
+            |> toJson
+            |> save
+        , Task.succeed msg |> Task.perform identity ]
+
+saveSpeedDials : Storage -> msg -> List OdorikApi.SpeedDial -> Cmd msg
+saveSpeedDials storage msg speedDials =
+    Cmd.batch
+        [ { storage | odorikApi = OdorikApi.saveSpeedDials storage.odorikApi speedDials }
             |> toJson
             |> save
         , Task.succeed msg |> Task.perform identity ]

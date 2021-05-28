@@ -22,3 +22,7 @@ error =
 input : List (Attribute msg)
 input =
     [ Border.width 1, Border.rounded 3, Border.color <| rgb255 136 138 133, padding 3 ]
+
+link : List (Attribute msg)
+link =
+    [ Font.underline, Font.color <| rgb255 0 0 128 ]

@@ -4,7 +4,7 @@ module OdorikApi exposing
     , init
     , decoder
     , encoder
-    , getBalance
+    , fetchBalance
     , errorToString
     , haveValidCredentials
     , getUser
@@ -13,11 +13,13 @@ module OdorikApi exposing
     , login
     , getCaller
     , getLine
-    , getLines
-    , getCallers
+    , fetchLines
+    , fetchCallers
     , saveCaller
     , saveLine
     , SpeedDial
+    , fetchSpeedDials
+    , saveSpeedDials
     , getSpeedDials
     )
 
@@ -33,7 +35,8 @@ type alias Model =
     { user : Maybe String
     , pass : Maybe String
     , line : Maybe String -- technically int, but meh
-    , caller : Maybe String
+    , caller : Maybe SpeedDial
+    , speedDials : List SpeedDial
     }
 
 type alias ApiResponse a =
@@ -45,6 +48,7 @@ init =
     , pass = Nothing
     , line = Nothing
     , caller = Nothing
+    , speedDials = []
     }
 
 decoder : Json.Decoder Model
@@ -52,11 +56,12 @@ decoder =
     let
         ns = Json.nullable Json.string
     in
-    Json.map4 Model
+    Json.map5 Model
         (Json.field "user" ns)
         (Json.field "pass" ns)
         (Json.field "line" ns)
-        (Json.field "caller" ns)
+        (Json.field "caller" <| Json.nullable speedDialDecoder)
+        (Json.field "speed_dials" <| Json.list speedDialDecoder)
 
 encoder : Model -> Encode.Value
 encoder m =
@@ -64,7 +69,8 @@ encoder m =
         [ ("user", EE.maybe Encode.string m.user)
         , ("pass", EE.maybe Encode.string m.pass)
         , ("line", EE.maybe Encode.string m.line)
-        , ("caller", EE.maybe Encode.string m.caller)
+        , ("caller", EE.maybe speedDialEncoder m.caller)
+        , ("speed_dials", Encode.list speedDialEncoder m.speedDials)
         ]
 
 serverFromCreds : Model -> String
@@ -126,8 +132,8 @@ haveValidCredentials m =
         (Just u, Just p) -> not ((String.isEmpty u) || (String.isEmpty p))
         _ -> False
 
-getBalance : Model -> (ApiResponse String -> msg) -> Cmd msg
-getBalance model msg =
+fetchBalance : Model -> (ApiResponse String -> msg) -> Cmd msg
+fetchBalance model msg =
     case haveValidCredentials model of
         False ->
             Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
@@ -146,7 +152,7 @@ getUser : Model -> Maybe String
 getUser m = m.user
 
 logout : Model -> Model
-logout m = { m | user = Nothing, pass = Nothing }
+logout _ = init
 
 login : Model -> String -> String -> Model
 login m u p = { m | user = Just u, pass = Just p }
@@ -158,9 +164,9 @@ verifyCredentials msg user pass =
     in
         case haveValidCredentials m of
             False -> Task.succeed (msg (Err (Http.BadBody "empty credentials"))) |> Task.perform identity
-            True -> getBalance m msg
+            True -> fetchBalance m msg
 
-getCaller : Model -> Maybe String
+getCaller : Model -> Maybe SpeedDial
 getCaller m = m.caller
 
 getLine : Model -> Maybe String
@@ -170,8 +176,8 @@ parseLines : String -> Result String (List String)
 parseLines data =
     Ok (String.split "," <| String.trim data)
 
-getLines : Model -> (ApiResponse (List String) -> msg) -> Cmd msg
-getLines model msg =
+fetchLines : Model -> (ApiResponse (List String) -> msg) -> Cmd msg
+fetchLines model msg =
     case haveValidCredentials model of
         False ->
             Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
@@ -186,12 +192,12 @@ getLines model msg =
                     , resolver = Http.stringResolver <| apiResolver parseLines
                     } ) )
 
-parseCallers : String -> Result String (List String)
+parseCallers : String -> Result String (List SpeedDial)
 parseCallers data =
-    Ok (List.filter (String.startsWith "00") <| String.split "," <| String.trim data)
+    Ok (List.map (\n -> { shortcut = 0, name = n, number = n}) <| List.filter (String.startsWith "00") <| String.split "," <| String.trim data)
 
-getCallers : Model -> (ApiResponse (List String) -> msg) -> Cmd msg
-getCallers model msg =
+fetchCallers : Model -> (ApiResponse (List SpeedDial) -> msg) -> Cmd msg
+fetchCallers model msg =
     case haveValidCredentials model of
         False ->
             Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
@@ -206,7 +212,7 @@ getCallers model msg =
                     , resolver = Http.stringResolver <| apiResolver parseCallers
                     } ) )
 
-saveCaller : Model -> Maybe String -> Model
+saveCaller : Model -> Maybe SpeedDial -> Model
 saveCaller m c = { m | caller = c }
 
 saveLine : Model -> Maybe String -> Model
@@ -239,8 +245,8 @@ speedDialEncoder m =
         , ("name", Encode.string m.name)
         ]
 
-getSpeedDials : Model -> (ApiResponse (List SpeedDial) -> msg) -> Cmd msg
-getSpeedDials model msg =
+fetchSpeedDials : Model -> (ApiResponse (List SpeedDial) -> msg) -> Cmd msg
+fetchSpeedDials model msg =
     case haveValidCredentials model of
         False ->
             Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
@@ -254,3 +260,9 @@ getSpeedDials model msg =
                     , url = (apiUrlFromCreds model "speed_dials.json") [UB.int "t" (Time.posixToMillis time)]
                     , resolver = Http.stringResolver <| apiResolver parseSpeedDials
                     } ) )
+
+saveSpeedDials : Model -> List SpeedDial -> Model
+saveSpeedDials m c = { m | speedDials = c }
+
+getSpeedDials : Model -> List SpeedDial
+getSpeedDials = .speedDials

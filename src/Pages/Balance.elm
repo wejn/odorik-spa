@@ -41,7 +41,7 @@ init : Request -> Storage -> ( Model, Cmd Msg )
 init req storage =
     case OdorikApi.haveValidCredentials storage.odorikApi of
         True ->
-            update req storage (GetBalance) <|
+            update req storage (FetchBalance) <|
                 { menu = Shared.menuGen req , state = Loading }
         False ->
             ( { menu = Shared.menuGen req
@@ -53,7 +53,7 @@ init req storage =
 type Msg
     = None
     | Login
-    | GetBalance
+    | FetchBalance
     | GotBalance (OdorikApi.ApiResponse String)
 
 
@@ -62,7 +62,7 @@ update req storage msg model =
     case msg of
         None -> ( model , Cmd.none )
         Login -> ( model, Request.pushRoute Route.Settings req )
-        GetBalance -> ({ model | state = Loading }, OdorikApi.getBalance storage.odorikApi GotBalance)
+        FetchBalance -> ({ model | state = Loading }, OdorikApi.fetchBalance storage.odorikApi GotBalance)
         GotBalance (Ok fullText) -> ({ model | state = Success fullText }, Cmd.none)
         GotBalance (Err err) -> ({ model | state = Failure (OdorikApi.errorToString err) }, Cmd.none)
 
@@ -74,7 +74,7 @@ balanceHelper : Model -> List (Element Msg)
 balanceHelper m =
     let
         login = { label = text "Login", onPress = Just Login }
-        refresh = { label = text "Refresh", onPress = Just GetBalance }
+        refresh = { label = text "Refresh", onPress = Just FetchBalance }
         (title, explanation, button) =
             case m.state of
                 NeedLogin -> ("Not logged in.", "", login)

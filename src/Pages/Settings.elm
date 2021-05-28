@@ -43,14 +43,16 @@ type alias Model =
     , username : String
     , password : String
     , lastError : String
-    , caller : Maybe String
-    , callerDropdownState : Dropdown.State String
+    , caller : Maybe OdorikApi.SpeedDial
+    , callerDropdownState : Dropdown.State OdorikApi.SpeedDial
     , line : Maybe String
     , lineDropdownState : Dropdown.State String
     , callersState : FetchState
-    , callers : List String
+    , callers : List OdorikApi.SpeedDial
     , linesState : FetchState
     , lines : List String
+    , speedDialsState : FetchState
+    , speedDials : List OdorikApi.SpeedDial
     }
 
 fetchAfterLogin : Cmd Msg
@@ -58,6 +60,7 @@ fetchAfterLogin =
     Cmd.batch
         [ Task.succeed StartLinesFetch |> Task.perform identity
         , Task.succeed StartCallersFetch |> Task.perform identity
+        , Task.succeed StartSpeedDialsFetch |> Task.perform identity
         ]
 
 init : Request -> Storage -> ( Model, Cmd Msg )
@@ -73,9 +76,11 @@ init req storage =
             , line = OdorikApi.getLine storage.odorikApi
             , lineDropdownState = Dropdown.init "line-dropdown"
             , callersState = Fetching
-            , callers = OdorikApi.getCaller storage.odorikApi |> Maybe.map (\x -> [x]) |> Maybe.withDefault []
+            , callers = []
             , linesState = Fetching
             , lines = OdorikApi.getLine storage.odorikApi |> Maybe.map (\x -> [x]) |> Maybe.withDefault []
+            , speedDialsState = Fetching
+            , speedDials = OdorikApi.getSpeedDials storage.odorikApi
             }
     in
         case OdorikApi.haveValidCredentials storage.odorikApi of
@@ -91,21 +96,23 @@ type Msg
     | ChangePassword String
     | ChangeUserName String
     | UsernameEnter
-    | CallerPicked (Maybe String)
+    | CallerPicked (Maybe OdorikApi.SpeedDial)
     | LinePicked (Maybe String)
-    | CallerDropdownMsg (Dropdown.Msg String)
+    | CallerDropdownMsg (Dropdown.Msg OdorikApi.SpeedDial)
     | LineDropdownMsg (Dropdown.Msg String)
     | StartLinesFetch
     | LinesFetched (OdorikApi.ApiResponse (List String))
     | StartCallersFetch
-    | CallersFetched (OdorikApi.ApiResponse (List String))
+    | CallersFetched (OdorikApi.ApiResponse (List OdorikApi.SpeedDial))
+    | StartSpeedDialsFetch
+    | SpeedDialsFetched (OdorikApi.ApiResponse (List OdorikApi.SpeedDial))
 
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
 update req storage msg model =
     case msg of
         None -> ( model , Cmd.none )
-        Logout -> ( { model | state = NeedLogin } , Storage.logout storage )
+        Logout -> ( { model | state = NeedLogin, caller = Nothing, line = Nothing } , Storage.logout storage )
         StartLogin -> ( model , OdorikApi.verifyCredentials VerifyLogin model.username model.password )
         VerifyLogin (Ok _) -> ( model , Storage.login storage FinishLogin model.username model.password )
         VerifyLogin (Err err) -> ( { model | lastError = OdorikApi.errorToString err} , Cmd.none )
@@ -128,7 +135,7 @@ update req storage msg model =
             in
             ( { model | lineDropdownState = state }, cmd )
         StartLinesFetch ->
-            ( model , OdorikApi.getLines storage.odorikApi LinesFetched )
+            ( model , OdorikApi.fetchLines storage.odorikApi LinesFetched )
         LinesFetched (Err err) ->
             ( { model | linesState = Error <| OdorikApi.errorToString err } , Cmd.none )
         LinesFetched (Ok a) ->
@@ -138,15 +145,17 @@ update req storage msg model =
                 _ ->
                     ( { model | linesState = Ready, lines = a } , Cmd.none )
         StartCallersFetch ->
-            ( model , OdorikApi.getCallers storage.odorikApi CallersFetched )
+            ( model , OdorikApi.fetchCallers storage.odorikApi CallersFetched )
         CallersFetched (Err err) ->
             ( { model | callersState = Error <| OdorikApi.errorToString err } , Cmd.none )
         CallersFetched (Ok a) ->
-            case (model.caller, a) of
-                (Nothing, [first]) ->
-                    ( { model | callersState = Ready, callers = a, caller = Just first } , Storage.saveCaller storage None (Just first) )
-                _ ->
-                    ( { model | callersState = Ready, callers = a } , Cmd.none )
+            ( { model | callersState = Ready, callers = a } , Cmd.none )
+        StartSpeedDialsFetch ->
+            ( model , OdorikApi.fetchSpeedDials storage.odorikApi SpeedDialsFetched )
+        SpeedDialsFetched (Err err) ->
+            ( { model | speedDialsState = Error <| OdorikApi.errorToString err } , Cmd.none )
+        SpeedDialsFetched (Ok a) ->
+            ( { model | speedDialsState = Ready, speedDials = a } , Storage.saveSpeedDials storage None a )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -254,9 +263,74 @@ dropdownConfig items selectionFromModel dropdownMsg itemPickedMsg =
         |> Dropdown.withListAttributes listAttrs
         |> Dropdown.withSearchAttributes searchAttrs
 
-callerConfig : Dropdown.Config String Msg Model
+callerConfig : Dropdown.Config OdorikApi.SpeedDial Msg Model
 callerConfig =
-    dropdownConfig (\m -> m.callers) .caller CallerDropdownMsg CallerPicked
+    let
+        items = (\m -> m.callers ++ m.speedDials)
+        selectionFromModel = .caller
+        dropdownMsg = CallerDropdownMsg
+        itemPickedMsg = CallerPicked
+        containerAttrs =
+            [ width (px 300) ]
+
+        selectAttrs =
+            [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
+
+        searchAttrs =
+            [ Border.width 0, padding 0 ]
+
+        listAttrs =
+            [ Border.width 1
+            , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
+            , width fill
+            , spacing 0
+            ]
+
+        itemToPrompt item =
+            text <| "(" ++ String.fromInt item.shortcut ++ ") " ++ item.name
+
+        itemToElement selected highlighted item =
+            let
+                bgColor =
+                    if selected then
+                        rgb255 100 100 100
+
+                    else if highlighted then
+                        rgb255 250 250 250
+
+                    else
+                        rgb255 255 255 255
+            in
+            column [ width fill ]
+                [ el
+                    [ Background.color bgColor
+                    , padding 8
+                    , spacing 10
+                    , width fill
+                    ]
+                    (text <| "(" ++ String.fromInt item.shortcut ++ ") " ++ item.name)
+                , el
+                    [ Background.color bgColor
+                    , padding 8
+                    , spacing 10
+                    , width fill
+                    , Font.size 16
+                    ]
+                    (text item.number)
+                ]
+    in
+    Dropdown.basic
+        { itemsFromModel = items
+        , selectionFromModel = selectionFromModel
+        , dropdownMsg = dropdownMsg
+        , onSelectMsg = itemPickedMsg
+        , itemToPrompt = itemToPrompt
+        , itemToElement = itemToElement
+        }
+        |> Dropdown.withContainerAttributes containerAttrs
+        |> Dropdown.withSelectAttributes selectAttrs
+        |> Dropdown.withListAttributes listAttrs
+        |> Dropdown.withSearchAttributes searchAttrs
 
 lineConfig : Dropdown.Config String Msg Model
 lineConfig =
@@ -286,8 +360,13 @@ settingsArea m =
         LoggedIn ->
             [ column [ width fill, spacing 20 ]
                 [ column [ width fill, spacing 10 ]
-                    [ row [ width fill ] <| labelWithSpinner m.callersState "Default caller"
+                    -- FIXME: should reflect both speedDialsState and callersState (probably with UI icons)
+                    [ row [ width fill ] <| labelWithSpinner m.speedDialsState "Default caller"
                     , Dropdown.view callerConfig m m.callerDropdownState
+                    , link Attr.link
+                        { url = "https://www.odorik.cz/ucet/rychle_kontakty.html"
+                        , label = el [] <| text "Edit your speed dials."
+                        }
                     ]
                 , column [ width fill, spacing 10 ]
                     [ row [ width fill ] <| labelWithSpinner m.linesState "Line"
