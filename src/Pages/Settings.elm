@@ -84,16 +84,17 @@ subscriptions _ =
 loginPage : Model -> Element Msg
 loginPage model =
     column [ paddingXY 0 20, spacingXY 0 10, width (px 300), centerX ]
-        [ Input.username ( Shared.onEnter UsernameEnter :: Attr.input)
+        [ paragraph [ Font.bold, Font.size 24, Font.alignLeft ] [ text "Login" ]
+        , Input.username ( Shared.onEnter UsernameEnter :: Attr.input)
             { onChange = ChangeUserName
             , text = model.username
-            , label = Input.labelAbove [] <| text "User name:"
+            , label = Input.labelAbove [ Font.alignLeft ] <| text "User name:"
             , placeholder = Nothing
             }
         , Input.currentPassword ( [htmlAttribute <| Html.Attributes.id "password", Shared.onEnter StartLogin] ++ Attr.input)
             { onChange = ChangePassword
             , text = model.password
-            , label = Input.labelAbove [] <| text "Password:"
+            , label = Input.labelAbove [ Font.alignLeft ] <| text "Password:"
             , placeholder = Nothing
             , show = False
             }
@@ -113,15 +114,17 @@ loginArea storage m =
                 [ loginPage m ]
             ]
         _ ->
-            [ paragraph
-                [Font.size 24, Font.center ]
-                [ text ("Logged in as: " ++ OdorikApi.getUser storage.odorikApi) ]
-            , paragraph
-                [ Font.center ]
-                [ Input.button
-                    Attr.button
-                    { label = text "Logout"
-                    , onPress = Just Logout }
+            [ row [ spacing 10 ]
+                [ paragraph
+                    [ width <| fillPortion 2, Font.center ]
+                    [ text ("Logged in as: " ++ OdorikApi.getUser storage.odorikApi) ]
+                , paragraph
+                    [ width <| fillPortion 1, Font.center ]
+                    [ Input.button
+                        Attr.button
+                        { label = text "Logout"
+                        , onPress = Just Logout }
+                    ]
                 ]
             ]
 

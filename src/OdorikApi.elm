@@ -32,10 +32,10 @@ type alias ApiResponse =
 
 init : Model
 init =
-    { user = "888"
-    , pass = "888"
-    , line = 111
-    , caller = "+420 800 123 456"
+    { user = ""
+    , pass = ""
+    , line = 0
+    , caller = ""
     }
 
 decoder : Json.Decoder Model

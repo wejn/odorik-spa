@@ -1,5 +1,6 @@
 module Pages.Balance exposing (Model, Msg, init, page, update, view)
 
+import Attr
 import Element exposing (..)
 import Element.Input as Input
 import Element.Border as Border
@@ -94,13 +95,7 @@ balanceHelper m =
         , paragraph
             [ Font.center ]
             [ Input.button
-                [ padding 10
-                , Border.width 2
-                , Border.rounded 16
-                , Border.color <| rgb255 0x50 0x50 0x50
-                , Background.color <| rgb255 0xbb 0xdd 0xff
-                , Font.color <| rgb255 255 255 255
-                ]
+                Attr.button
                 button
             ]
         ]
