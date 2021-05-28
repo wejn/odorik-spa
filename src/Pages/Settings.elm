@@ -262,7 +262,7 @@ lineConfig : Dropdown.Config String Msg Model
 lineConfig =
     dropdownConfig (\m -> m.lines) .line LineDropdownMsg LinePicked
 
--- labelWithSpinner : FetchState -> String -> ?
+labelWithSpinner : FetchState -> String -> List (Element Msg)
 labelWithSpinner s t =
     case s of
         Fetching ->

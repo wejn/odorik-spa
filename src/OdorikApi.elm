@@ -17,6 +17,8 @@ module OdorikApi exposing
     , getCallers
     , saveCaller
     , saveLine
+    , SpeedDial
+    , getSpeedDials
     )
 
 import Http
@@ -93,7 +95,7 @@ errorToString error =
         Http.BadBody errorMessage ->
             errorMessage
 
-apiResolver : (String -> Maybe a) -> Http.Response String -> ApiResponse a
+apiResolver : (String -> Result String a) -> Http.Response String -> ApiResponse a
 apiResolver =
     \parser ->
         \response ->
@@ -115,8 +117,8 @@ apiResolver =
                         True -> Err (Http.BadBody ("api: " ++ (String.dropLeft 6 (String.trim body))))
                         _ ->
                             case parser body of
-                                Nothing -> Err (Http.BadBody ("error parsing response"))
-                                Just a -> Ok a
+                                Err err -> Err (Http.BadBody ("parsing:" ++ err))
+                                Ok a -> Ok a
 
 haveValidCredentials : Model -> Bool
 haveValidCredentials m =
@@ -137,7 +139,7 @@ getBalance model msg =
                     , headers = []
                     , method = "GET"
                     , url = (apiUrlFromCreds model "balance") [UB.int "t" (Time.posixToMillis time)]
-                    , resolver = Http.stringResolver <| apiResolver (\x -> Just x)
+                    , resolver = Http.stringResolver <| apiResolver (\x -> Ok x)
                     } ) )
 
 getUser : Model -> Maybe String
@@ -164,9 +166,9 @@ getCaller m = m.caller
 getLine : Model -> Maybe String
 getLine m = m.line
 
-parseLines : String -> Maybe (List String)
+parseLines : String -> Result String (List String)
 parseLines data =
-    Just (String.split "," <| String.trim data)
+    Ok (String.split "," <| String.trim data)
 
 getLines : Model -> (ApiResponse (List String) -> msg) -> Cmd msg
 getLines model msg =
@@ -184,9 +186,9 @@ getLines model msg =
                     , resolver = Http.stringResolver <| apiResolver parseLines
                     } ) )
 
-parseCallers : String -> Maybe (List String)
+parseCallers : String -> Result String (List String)
 parseCallers data =
-    Just (List.filter (String.startsWith "00") <| String.split "," <| String.trim data)
+    Ok (List.filter (String.startsWith "00") <| String.split "," <| String.trim data)
 
 getCallers : Model -> (ApiResponse (List String) -> msg) -> Cmd msg
 getCallers model msg =
@@ -209,3 +211,46 @@ saveCaller m c = { m | caller = c }
 
 saveLine : Model -> Maybe String -> Model
 saveLine m l = { m | line = l }
+
+type alias SpeedDial =
+    { shortcut : Int
+    , number : String
+    , name : String
+    }
+
+parseSpeedDials : String -> Result String (List SpeedDial)
+parseSpeedDials s =
+    case Json.decodeString (Json.list speedDialDecoder) s of
+        Err e -> Err <| Json.errorToString e
+        Ok v -> Ok v
+
+speedDialDecoder : Json.Decoder SpeedDial
+speedDialDecoder  =
+    Json.map3 SpeedDial
+        (Json.field "shortcut" Json.int)
+        (Json.field "number" Json.string)
+        (Json.field "name" Json.string)
+
+speedDialEncoder : SpeedDial -> Encode.Value
+speedDialEncoder m =
+    Encode.object
+        [ ("shortcut", Encode.int m.shortcut)
+        , ("number", Encode.string m.number)
+        , ("name", Encode.string m.name)
+        ]
+
+getSpeedDials : Model -> (ApiResponse (List SpeedDial) -> msg) -> Cmd msg
+getSpeedDials model msg =
+    case haveValidCredentials model of
+        False ->
+            Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
+        True ->
+            Task.attempt msg (Time.now |> Task.andThen (\time ->
+                Http.task
+                    { body = Http.emptyBody
+                    , timeout = Nothing
+                    , headers = []
+                    , method = "GET"
+                    , url = (apiUrlFromCreds model "speed_dials.json") [UB.int "t" (Time.posixToMillis time)]
+                    , resolver = Http.stringResolver <| apiResolver parseSpeedDials
+                    } ) )
