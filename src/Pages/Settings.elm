@@ -35,6 +35,7 @@ type State
 type FetchState
     = Fetching
     | Ready
+    | Error String
 
 type alias Model =
     { menu : Element Msg
@@ -51,6 +52,13 @@ type alias Model =
     , linesState : FetchState
     , lines : List String
     }
+
+fetchAfterLogin : Cmd Msg
+fetchAfterLogin =
+    Cmd.batch
+        [ Task.succeed StartLinesFetch |> Task.perform identity
+        , Task.succeed StartCallersFetch |> Task.perform identity
+        ]
 
 init : Request -> Storage -> ( Model, Cmd Msg )
 init req storage =
@@ -71,7 +79,7 @@ init req storage =
             }
     in
         case OdorikApi.haveValidCredentials storage.odorikApi of
-            True -> ( { m | state = LoggedIn } , Cmd.none )
+            True -> ( { m | state = LoggedIn } , fetchAfterLogin )
             False -> ( { m | state = NeedLogin } , Cmd.none )
 
 type Msg
@@ -87,6 +95,10 @@ type Msg
     | LinePicked (Maybe String)
     | CallerDropdownMsg (Dropdown.Msg String)
     | LineDropdownMsg (Dropdown.Msg String)
+    | StartLinesFetch
+    | LinesFetched (OdorikApi.ApiResponse (List String))
+    | StartCallersFetch
+    | CallersFetched (OdorikApi.ApiResponse (List String))
 
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
@@ -97,24 +109,44 @@ update req storage msg model =
         StartLogin -> ( model , OdorikApi.verifyCredentials VerifyLogin model.username model.password )
         VerifyLogin (Ok _) -> ( model , Storage.login storage FinishLogin model.username model.password )
         VerifyLogin (Err err) -> ( { model | lastError = OdorikApi.errorToString err} , Cmd.none )
-        FinishLogin -> ( { model | state = LoggedIn } , Cmd.none )
+        FinishLogin -> ( { model | state = LoggedIn } , fetchAfterLogin )
         ChangeUserName u -> ( { model | username = u } , Cmd.none )
         ChangePassword p -> ( { model | password = p } , Cmd.none )
         UsernameEnter -> ( model, Task.attempt (\_ -> None) (Dom.focus "password") )
-        CallerPicked c -> ( { model | caller = c }, Cmd.none )
+        CallerPicked c -> ( { model | caller = c }, Storage.saveCaller storage None c )
         CallerDropdownMsg sm ->
             let
                 ( state , cmd ) =
                     Dropdown.update callerConfig sm model model.callerDropdownState
             in
             ( { model | callerDropdownState = state }, cmd )
-        LinePicked l -> ( { model | line = l }, Cmd.none )
+        LinePicked l -> ( { model | line = l }, Storage.saveLine storage None l )
         LineDropdownMsg sm ->
             let
                 ( state , cmd ) =
                     Dropdown.update lineConfig sm model model.lineDropdownState
             in
             ( { model | lineDropdownState = state }, cmd )
+        StartLinesFetch ->
+            ( model , OdorikApi.getLines storage.odorikApi LinesFetched )
+        LinesFetched (Err err) ->
+            ( { model | linesState = Error <| OdorikApi.errorToString err } , Cmd.none )
+        LinesFetched (Ok a) ->
+            case (model.line, a) of
+                (Nothing, [first]) ->
+                    ( { model | linesState = Ready, lines = a, line = Just first } , Storage.saveLine storage None (Just first) )
+                _ ->
+                    ( { model | linesState = Ready, lines = a } , Cmd.none )
+        StartCallersFetch ->
+            ( model , OdorikApi.getCallers storage.odorikApi CallersFetched )
+        CallersFetched (Err err) ->
+            ( { model | callersState = Error <| OdorikApi.errorToString err } , Cmd.none )
+        CallersFetched (Ok a) ->
+            case (model.caller, a) of
+                (Nothing, [first]) ->
+                    ( { model | callersState = Ready, callers = a, caller = Just first } , Storage.saveCaller storage None (Just first) )
+                _ ->
+                    ( { model | callersState = Ready, callers = a } , Cmd.none )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -192,11 +224,11 @@ dropdownConfig items selectionFromModel dropdownMsg itemPickedMsg =
         itemToElement selected highlighted i =
             let
                 bgColor =
-                    if highlighted then
-                        rgb255 250 250 250
-
-                    else if selected then
+                    if selected then
                         rgb255 100 100 100
+
+                    else if highlighted then
+                        rgb255 250 250 250
 
                     else
                         rgb255 255 255 255
@@ -240,6 +272,10 @@ labelWithSpinner s t =
         Ready ->
             [ paragraph [ Font.alignLeft ] [ text t ]
             ]
+        Error e ->
+            [ paragraph [ Font.alignLeft ] [ text t ]
+            , paragraph [ Font.alignRight ] [ text <| "(error: " ++ e ++ ")" ]
+            ]
 
 
 settingsArea : Model -> List (Element Msg)
@@ -258,12 +294,6 @@ settingsArea m =
                     , Dropdown.view lineConfig m m.lineDropdownState
                     ]
                 ]
-                , row [ width fill ]
-                    [ Input.button
-                        Attr.button
-                        { label = text "Save"
-                        , onPress = Just None } -- FIXME
-                    ]
             ]
 
 view : Storage -> Model -> View Msg

@@ -63,12 +63,8 @@ update req storage msg model =
         None -> ( model , Cmd.none )
         Login -> ( model, Request.pushRoute Route.Settings req )
         GetBalance -> ({ model | state = Loading }, OdorikApi.getBalance storage.odorikApi GotBalance)
-        GotBalance result ->
-            case result of
-                Ok fullText ->
-                    ({ model | state = Success fullText }, Cmd.none)
-                Err err ->
-                    ({ model | state = Failure (OdorikApi.errorToString err) }, Cmd.none)
+        GotBalance (Ok fullText) -> ({ model | state = Success fullText }, Cmd.none)
+        GotBalance (Err err) -> ({ model | state = Failure (OdorikApi.errorToString err) }, Cmd.none)
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =

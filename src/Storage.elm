@@ -2,12 +2,15 @@ port module Storage exposing
     ( Storage, fromJson, onChange
     , logout
     , login
+    , saveCaller
+    , saveLine
     )
 
 {-|
 
 @docs Storage, fromJson, onChange
 @docs logout, login
+@docs saveCaller, saveLine
 
 -}
 
@@ -81,6 +84,22 @@ login : Storage -> msg -> String -> String -> Cmd msg
 login storage msg user pass =
     Cmd.batch
         [ { storage | odorikApi = OdorikApi.login storage.odorikApi user pass }
+            |> toJson
+            |> save
+        , Task.succeed msg |> Task.perform identity ]
+
+saveLine : Storage -> msg -> Maybe String -> Cmd msg
+saveLine storage msg line =
+    Cmd.batch
+        [ { storage | odorikApi = OdorikApi.saveLine storage.odorikApi line }
+            |> toJson
+            |> save
+        , Task.succeed msg |> Task.perform identity ]
+
+saveCaller : Storage -> msg -> Maybe String -> Cmd msg
+saveCaller storage msg caller =
+    Cmd.batch
+        [ { storage | odorikApi = OdorikApi.saveCaller storage.odorikApi caller }
             |> toJson
             |> save
         , Task.succeed msg |> Task.perform identity ]

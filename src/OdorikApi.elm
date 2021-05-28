@@ -13,6 +13,10 @@ module OdorikApi exposing
     , login
     , getCaller
     , getLine
+    , getLines
+    , getCallers
+    , saveCaller
+    , saveLine
     )
 
 import Http
@@ -159,3 +163,49 @@ getCaller m = m.caller
 
 getLine : Model -> Maybe String
 getLine m = m.line
+
+parseLines : String -> Maybe (List String)
+parseLines data =
+    Just (String.split "," <| String.trim data)
+
+getLines : Model -> (ApiResponse (List String) -> msg) -> Cmd msg
+getLines model msg =
+    case haveValidCredentials model of
+        False ->
+            Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
+        True ->
+            Task.attempt msg (Time.now |> Task.andThen (\time ->
+                Http.task
+                    { body = Http.emptyBody
+                    , timeout = Nothing
+                    , headers = []
+                    , method = "GET"
+                    , url = (apiUrlFromCreds model "lines") [UB.int "t" (Time.posixToMillis time)]
+                    , resolver = Http.stringResolver <| apiResolver parseLines
+                    } ) )
+
+parseCallers : String -> Maybe (List String)
+parseCallers data =
+    Just (List.filter (String.startsWith "00") <| String.split "," <| String.trim data)
+
+getCallers : Model -> (ApiResponse (List String) -> msg) -> Cmd msg
+getCallers model msg =
+    case haveValidCredentials model of
+        False ->
+            Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
+        True ->
+            Task.attempt msg (Time.now |> Task.andThen (\time ->
+                Http.task
+                    { body = Http.emptyBody
+                    , timeout = Nothing
+                    , headers = []
+                    , method = "GET"
+                    , url = (apiUrlFromCreds model "sms/allowed_sender") [UB.int "t" (Time.posixToMillis time)]
+                    , resolver = Http.stringResolver <| apiResolver parseCallers
+                    } ) )
+
+saveCaller : Model -> Maybe String -> Model
+saveCaller m c = { m | caller = c }
+
+saveLine : Model -> Maybe String -> Model
+saveLine m l = { m | line = l }
