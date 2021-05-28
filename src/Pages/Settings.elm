@@ -78,7 +78,7 @@ type Msg
     = None
     | Logout
     | StartLogin
-    | VerifyLogin OdorikApi.ApiResponse
+    | VerifyLogin (OdorikApi.ApiResponse String)
     | FinishLogin
     | ChangePassword String
     | ChangeUserName String

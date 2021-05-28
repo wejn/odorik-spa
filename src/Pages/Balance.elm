@@ -54,7 +54,7 @@ type Msg
     = None
     | Login
     | GetBalance
-    | GotBalance OdorikApi.ApiResponse
+    | GotBalance (OdorikApi.ApiResponse String)
 
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )

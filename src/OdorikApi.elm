@@ -30,8 +30,8 @@ type alias Model =
     , caller : Maybe String
     }
 
-type alias ApiResponse =
-    Result Http.Error String
+type alias ApiResponse a =
+    Result Http.Error a
 
 init : Model
 init =
@@ -89,12 +89,9 @@ errorToString error =
         Http.BadBody errorMessage ->
             errorMessage
 
-expectApiResponse : (ApiResponse -> msg) -> Http.Expect msg
-expectApiResponse toMsg =
-    Http.expectStringResponse toMsg apiResolver
-
-apiResolver : Http.Response String -> ApiResponse
+apiResolver : (String -> Maybe a) -> Http.Response String -> ApiResponse a
 apiResolver =
+    \parser ->
         \response ->
             case response of
                 Http.BadUrl_ url ->
@@ -112,7 +109,10 @@ apiResolver =
                 Http.GoodStatus_ metadata body ->
                     case String.startsWith "error " body of
                         True -> Err (Http.BadBody ("api: " ++ (String.dropLeft 6 (String.trim body))))
-                        _ -> Ok body
+                        _ ->
+                            case parser body of
+                                Nothing -> Err (Http.BadBody ("error parsing response"))
+                                Just a -> Ok a
 
 haveValidCredentials : Model -> Bool
 haveValidCredentials m =
@@ -120,17 +120,12 @@ haveValidCredentials m =
         (Just u, Just p) -> not ((String.isEmpty u) || (String.isEmpty p))
         _ -> False
 
-getBalance : Model -> (ApiResponse -> msg) -> Cmd msg
+getBalance : Model -> (ApiResponse String -> msg) -> Cmd msg
 getBalance model msg =
     case haveValidCredentials model of
         False ->
             Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
         True ->
-            {-
-            Http.get
-               { url = apiUrlFromCreds model "balance" [] -- FIXME: mod the time, to force refresh
-               , expect = expectApiResponse msg }
-            -}
             Task.attempt msg (Time.now |> Task.andThen (\time ->
                 Http.task
                     { body = Http.emptyBody
@@ -138,7 +133,7 @@ getBalance model msg =
                     , headers = []
                     , method = "GET"
                     , url = (apiUrlFromCreds model "balance") [UB.int "t" (Time.posixToMillis time)]
-                    , resolver = Http.stringResolver apiResolver
+                    , resolver = Http.stringResolver <| apiResolver (\x -> Just x)
                     } ) )
 
 getUser : Model -> Maybe String
@@ -150,7 +145,7 @@ logout m = { m | user = Nothing, pass = Nothing }
 login : Model -> String -> String -> Model
 login m u p = { m | user = Just u, pass = Just p }
 
-verifyCredentials : (ApiResponse -> msg) -> String -> String -> Cmd msg
+verifyCredentials : (ApiResponse String -> msg) -> String -> String -> Cmd msg
 verifyCredentials msg user pass =
     let
         m = { init | user = Just user, pass = Just pass }
