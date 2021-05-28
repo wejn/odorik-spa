@@ -11,6 +11,8 @@ module OdorikApi exposing
     , logout
     , verifyCredentials
     , login
+    , getCaller
+    , getLine
     )
 
 import Http
@@ -23,7 +25,7 @@ import Url.Builder as UB
 type alias Model =
     { user : String
     , pass : String
-    , line : Int
+    , line : String -- technically int, but meh
     , caller : String
     }
 
@@ -34,8 +36,8 @@ init : Model
 init =
     { user = ""
     , pass = ""
-    , line = 0
-    , caller = ""
+    , line = "111"
+    , caller = "+420 800 123 456"
     }
 
 decoder : Json.Decoder Model
@@ -43,7 +45,7 @@ decoder =
     Json.map4 Model
         (Json.field "user" Json.string)
         (Json.field "pass" Json.string)
-        (Json.field "line" Json.int)
+        (Json.field "line" Json.string)
         (Json.field "caller" Json.string)
 
 encoder : Model -> Encode.Value
@@ -51,7 +53,7 @@ encoder m =
     Encode.object
         [ ("user", Encode.string m.user)
         , ("pass", Encode.string m.pass)
-        , ("line", Encode.int m.line)
+        , ("line", Encode.string m.line)
         , ("caller", Encode.string m.caller)
         ]
 
@@ -150,3 +152,9 @@ verifyCredentials msg user pass =
         case haveValidCredentials m of
             False -> Task.succeed (msg (Err (Http.BadBody "empty credentials"))) |> Task.perform identity
             True -> getBalance m msg
+
+getCaller : Model -> String
+getCaller m = m.caller
+
+getLine : Model -> String
+getLine m = m.line

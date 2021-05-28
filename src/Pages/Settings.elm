@@ -2,6 +2,7 @@ module Pages.Settings exposing (Model, Msg, init, page, update, view)
 
 import Attr
 import Browser.Dom as Dom
+import Dropdown
 import Element exposing (..)
 import Element.Input as Input
 import Element.Border as Border
@@ -31,12 +32,24 @@ type State
     = LoggedIn
     | NeedLogin
 
+type FetchState
+    = Fetching
+    | Ready
+
 type alias Model =
     { menu : Element Msg
     , state : State
     , username : String
     , password : String
     , lastError : String
+    , caller : Maybe String
+    , callerDropdownState : Dropdown.State String
+    , line : Maybe String
+    , lineDropdownState : Dropdown.State String
+    , callersState : FetchState
+    , callers : List (String)
+    , linesState : FetchState
+    , lines : List (String)
     }
 
 init : Request -> Storage -> ( Model, Cmd Msg )
@@ -47,6 +60,14 @@ init req storage =
             , username = ""
             , password = ""
             , lastError = ""
+            , caller = Just <| OdorikApi.getCaller storage.odorikApi
+            , callerDropdownState = Dropdown.init "caller-dropdown"
+            , line = Just <| OdorikApi.getLine storage.odorikApi
+            , lineDropdownState = Dropdown.init "line-dropdown"
+            , callersState = Fetching
+            , callers = [OdorikApi.getCaller storage.odorikApi]
+            , linesState = Fetching
+            , lines = [OdorikApi.getLine storage.odorikApi]
             }
     in
         case OdorikApi.haveValidCredentials storage.odorikApi of
@@ -62,6 +83,10 @@ type Msg
     | ChangePassword String
     | ChangeUserName String
     | UsernameEnter
+    | CallerPicked (Maybe String)
+    | LinePicked (Maybe String)
+    | CallerDropdownMsg (Dropdown.Msg String)
+    | LineDropdownMsg (Dropdown.Msg String)
 
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
@@ -76,6 +101,20 @@ update req storage msg model =
         ChangeUserName u -> ( { model | username = u } , Cmd.none )
         ChangePassword p -> ( { model | password = p } , Cmd.none )
         UsernameEnter -> ( model, Task.attempt (\_ -> None) (Dom.focus "password") )
+        CallerPicked c -> ( { model | caller = c }, Cmd.none )
+        CallerDropdownMsg sm ->
+            let
+                ( state , cmd ) =
+                    Dropdown.update callerConfig sm model model.callerDropdownState
+            in
+            ( { model | callerDropdownState = state }, cmd )
+        LinePicked l -> ( { model | line = l }, Cmd.none )
+        LineDropdownMsg sm ->
+            let
+                ( state , cmd ) =
+                    Dropdown.update lineConfig sm model model.lineDropdownState
+            in
+            ( { model | lineDropdownState = state }, cmd )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -113,7 +152,7 @@ loginArea storage m =
                 [ Font.center ]
                 [ loginPage m ]
             ]
-        _ ->
+        LoggedIn ->
             [ row [ spacing 10 ]
                 [ paragraph
                     [ width <| fillPortion 2, Font.center ]
@@ -128,15 +167,99 @@ loginArea storage m =
                 ]
             ]
 
+dropdownConfig : (Model -> List String) -> (Model -> Maybe String) -> (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdown.Config String Msg Model
+dropdownConfig items selectionFromModel dropdownMsg itemPickedMsg =
+    let
+        containerAttrs =
+            [ width (px 300) ]
+
+        selectAttrs =
+            [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
+
+        searchAttrs =
+            [ Border.width 0, padding 0 ]
+
+        listAttrs =
+            [ Border.width 1
+            , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
+            , width fill
+            , spacing 0
+            ]
+
+        itemToPrompt item =
+            text item
+
+        itemToElement selected highlighted i =
+            let
+                bgColor =
+                    if highlighted then
+                        rgb255 250 250 250
+
+                    else if selected then
+                        rgb255 100 100 100
+
+                    else
+                        rgb255 255 255 255
+            in
+            el
+                [ Background.color bgColor
+                , padding 8
+                , spacing 10
+                , width fill
+                ]
+                (text i)
+    in
+    Dropdown.basic
+        { itemsFromModel = items
+        , selectionFromModel = selectionFromModel
+        , dropdownMsg = dropdownMsg
+        , onSelectMsg = itemPickedMsg
+        , itemToPrompt = itemToPrompt
+        , itemToElement = itemToElement
+        }
+        |> Dropdown.withContainerAttributes containerAttrs
+        |> Dropdown.withSelectAttributes selectAttrs
+        |> Dropdown.withListAttributes listAttrs
+        |> Dropdown.withSearchAttributes searchAttrs
+
+callerConfig : Dropdown.Config String Msg Model
+callerConfig =
+    dropdownConfig (\m -> m.callers) .caller CallerDropdownMsg CallerPicked
+
+lineConfig : Dropdown.Config String Msg Model
+lineConfig =
+    dropdownConfig (\m -> m.lines) .line LineDropdownMsg LinePicked
+
 settingsArea : Model -> List (Element Msg)
 settingsArea m =
     case m.state of
         NeedLogin ->
             []
-        _ ->
-            [ paragraph
-                [ Font.center ]
-                [ text "(the rest)" ] -- FIXME: Implement the rest of settings (caller, line, ...)
+        LoggedIn ->
+            [ column [ width fill, spacing 20 ]
+                [ column [ width fill, spacing 10 ]
+                    [ row [ width fill ]
+                        [ paragraph
+                            [ Font.alignLeft ]
+                            [ text "Default caller" ]
+                        ]
+                    , Dropdown.view callerConfig m m.callerDropdownState
+                    ]
+                , column [ width fill, spacing 10 ]
+                    [ row [ width fill ]
+                        [ paragraph
+                            [ Font.alignLeft ]
+                            [ text "Line" ]
+                        ]
+                    , Dropdown.view lineConfig m m.lineDropdownState
+                    ]
+                ]
+                , row [ width fill ]
+                    [ Input.button
+                        Attr.button
+                        { label = text "Save"
+                        , onPress = Just None } -- FIXME
+                    ]
             ]
 
 view : Storage -> Model -> View Msg
