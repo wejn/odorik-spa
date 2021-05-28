@@ -18,15 +18,16 @@ module OdorikApi exposing
 import Http
 import Json.Decode as Json
 import Json.Encode as Encode
+import Json.Encode.Extra as EE
 import Task
 import Time
 import Url.Builder as UB
 
 type alias Model =
-    { user : String
-    , pass : String
-    , line : String -- technically int, but meh
-    , caller : String
+    { user : Maybe String
+    , pass : Maybe String
+    , line : Maybe String -- technically int, but meh
+    , caller : Maybe String
     }
 
 type alias ApiResponse =
@@ -34,38 +35,41 @@ type alias ApiResponse =
 
 init : Model
 init =
-    { user = ""
-    , pass = ""
-    , line = "111"
-    , caller = "+420 800 123 456"
+    { user = Nothing
+    , pass = Nothing
+    , line = Nothing
+    , caller = Nothing
     }
 
 decoder : Json.Decoder Model
 decoder =
+    let
+        ns = Json.nullable Json.string
+    in
     Json.map4 Model
-        (Json.field "user" Json.string)
-        (Json.field "pass" Json.string)
-        (Json.field "line" Json.string)
-        (Json.field "caller" Json.string)
+        (Json.field "user" ns)
+        (Json.field "pass" ns)
+        (Json.field "line" ns)
+        (Json.field "caller" ns)
 
 encoder : Model -> Encode.Value
 encoder m =
     Encode.object
-        [ ("user", Encode.string m.user)
-        , ("pass", Encode.string m.pass)
-        , ("line", Encode.string m.line)
-        , ("caller", Encode.string m.caller)
+        [ ("user", EE.maybe Encode.string m.user)
+        , ("pass", EE.maybe Encode.string m.pass)
+        , ("line", EE.maybe Encode.string m.line)
+        , ("caller", EE.maybe Encode.string m.caller)
         ]
 
 serverFromCreds : Model -> String
 serverFromCreds m =
     case (m.user, m.pass) of
-        ("888", "888") -> "https://wejn.com/odorik_test_api___"
+        (Just "888", Just "888") -> "https://wejn.com/odorik_test_api___"
         _ -> "https://www.odorik.cz/api/v1"
 
 apiUrlFromCreds : Model -> String -> List (UB.QueryParameter) -> String
 apiUrlFromCreds m api qp =
-    UB.custom (UB.CrossOrigin (serverFromCreds m)) [api] ([UB.string "user" m.user, UB.string "password" m.pass] ++ qp) Nothing
+    UB.custom (UB.CrossOrigin (serverFromCreds m)) [api] ([UB.string "user" (m.user |> Maybe.withDefault ""), UB.string "password" (m.pass |> Maybe.withDefault "")] ++ qp) Nothing
 
 errorToString : Http.Error -> String
 errorToString error =
@@ -112,7 +116,9 @@ apiResolver =
 
 haveValidCredentials : Model -> Bool
 haveValidCredentials m =
-    not ((String.isEmpty m.user) || (String.isEmpty m.pass))
+    case (m.user, m.pass) of
+        (Just u, Just p) -> not ((String.isEmpty u) || (String.isEmpty p))
+        _ -> False
 
 getBalance : Model -> (ApiResponse -> msg) -> Cmd msg
 getBalance model msg =
@@ -135,26 +141,26 @@ getBalance model msg =
                     , resolver = Http.stringResolver apiResolver
                     } ) )
 
-getUser : Model -> String
+getUser : Model -> Maybe String
 getUser m = m.user
 
 logout : Model -> Model
-logout m = { m | user = "", pass = "" }
+logout m = { m | user = Nothing, pass = Nothing }
 
 login : Model -> String -> String -> Model
-login m u p = { m | user = u, pass = p }
+login m u p = { m | user = Just u, pass = Just p }
 
 verifyCredentials : (ApiResponse -> msg) -> String -> String -> Cmd msg
 verifyCredentials msg user pass =
     let
-        m = { init | user = user, pass = pass }
+        m = { init | user = Just user, pass = Just pass }
     in
         case haveValidCredentials m of
             False -> Task.succeed (msg (Err (Http.BadBody "empty credentials"))) |> Task.perform identity
             True -> getBalance m msg
 
-getCaller : Model -> String
+getCaller : Model -> Maybe String
 getCaller m = m.caller
 
-getLine : Model -> String
+getLine : Model -> Maybe String
 getLine m = m.line

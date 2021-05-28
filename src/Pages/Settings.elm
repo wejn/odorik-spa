@@ -47,9 +47,9 @@ type alias Model =
     , line : Maybe String
     , lineDropdownState : Dropdown.State String
     , callersState : FetchState
-    , callers : List (String)
+    , callers : List String
     , linesState : FetchState
-    , lines : List (String)
+    , lines : List String
     }
 
 init : Request -> Storage -> ( Model, Cmd Msg )
@@ -60,14 +60,14 @@ init req storage =
             , username = ""
             , password = ""
             , lastError = ""
-            , caller = Just <| OdorikApi.getCaller storage.odorikApi
+            , caller = OdorikApi.getCaller storage.odorikApi
             , callerDropdownState = Dropdown.init "caller-dropdown"
-            , line = Just <| OdorikApi.getLine storage.odorikApi
+            , line = OdorikApi.getLine storage.odorikApi
             , lineDropdownState = Dropdown.init "line-dropdown"
             , callersState = Fetching
-            , callers = [OdorikApi.getCaller storage.odorikApi]
+            , callers = OdorikApi.getCaller storage.odorikApi |> Maybe.map (\x -> [x]) |> Maybe.withDefault []
             , linesState = Fetching
-            , lines = [OdorikApi.getLine storage.odorikApi]
+            , lines = OdorikApi.getLine storage.odorikApi |> Maybe.map (\x -> [x]) |> Maybe.withDefault []
             }
     in
         case OdorikApi.haveValidCredentials storage.odorikApi of
@@ -156,7 +156,7 @@ loginArea storage m =
             [ row [ spacing 10 ]
                 [ paragraph
                     [ width <| fillPortion 2, Font.center ]
-                    [ text ("Logged in as: " ++ OdorikApi.getUser storage.odorikApi) ]
+                    [ text ("Logged in as: " ++ (OdorikApi.getUser storage.odorikApi |> Maybe.withDefault "???")) ]
                 , paragraph
                     [ width <| fillPortion 1, Font.center ]
                     [ Input.button
@@ -230,6 +230,18 @@ lineConfig : Dropdown.Config String Msg Model
 lineConfig =
     dropdownConfig (\m -> m.lines) .line LineDropdownMsg LinePicked
 
+-- labelWithSpinner : FetchState -> String -> ?
+labelWithSpinner s t =
+    case s of
+        Fetching ->
+            [ paragraph [ Font.alignLeft ] [ text t ]
+            , paragraph [ Font.alignRight ] [ text "(loading...)" ]
+            ]
+        Ready ->
+            [ paragraph [ Font.alignLeft ] [ text t ]
+            ]
+
+
 settingsArea : Model -> List (Element Msg)
 settingsArea m =
     case m.state of
@@ -238,19 +250,11 @@ settingsArea m =
         LoggedIn ->
             [ column [ width fill, spacing 20 ]
                 [ column [ width fill, spacing 10 ]
-                    [ row [ width fill ]
-                        [ paragraph
-                            [ Font.alignLeft ]
-                            [ text "Default caller" ]
-                        ]
+                    [ row [ width fill ] <| labelWithSpinner m.callersState "Default caller"
                     , Dropdown.view callerConfig m m.callerDropdownState
                     ]
                 , column [ width fill, spacing 10 ]
-                    [ row [ width fill ]
-                        [ paragraph
-                            [ Font.alignLeft ]
-                            [ text "Line" ]
-                        ]
+                    [ row [ width fill ] <| labelWithSpinner m.linesState "Line"
                     , Dropdown.view lineConfig m m.lineDropdownState
                     ]
                 ]
