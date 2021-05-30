@@ -32,11 +32,6 @@ type State
     = LoggedIn
     | NeedLogin
 
-type FetchState
-    = Fetching
-    | Ready
-    | Error String
-
 type alias Model =
     { menu : Element Msg
     , state : State
@@ -47,11 +42,11 @@ type alias Model =
     , callerDropdownState : Dropdown.State OdorikApi.SpeedDial
     , line : Maybe String
     , lineDropdownState : Dropdown.State String
-    , callersState : FetchState
+    , callersState : Shared.FetchState
     , callers : List OdorikApi.SpeedDial
-    , linesState : FetchState
+    , linesState : Shared.FetchState
     , lines : List String
-    , speedDialsState : FetchState
+    , speedDialsState : Shared.FetchState
     , speedDials : List OdorikApi.SpeedDial
     }
 
@@ -75,11 +70,11 @@ init req storage =
             , callerDropdownState = Dropdown.init "caller-dropdown"
             , line = OdorikApi.getLine storage.odorikApi
             , lineDropdownState = Dropdown.init "line-dropdown"
-            , callersState = Fetching
+            , callersState = Shared.Fetching
             , callers = []
-            , linesState = Fetching
+            , linesState = Shared.Fetching
             , lines = OdorikApi.getLine storage.odorikApi |> Maybe.map (\x -> [x]) |> Maybe.withDefault []
-            , speedDialsState = Fetching
+            , speedDialsState = Shared.Fetching
             , speedDials = OdorikApi.getSpeedDials storage.odorikApi
             }
     in
@@ -137,25 +132,25 @@ update req storage msg model =
         StartLinesFetch ->
             ( model , OdorikApi.fetchLines storage.odorikApi LinesFetched )
         LinesFetched (Err err) ->
-            ( { model | linesState = Error <| OdorikApi.errorToString err } , Cmd.none )
+            ( { model | linesState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         LinesFetched (Ok a) ->
             case (model.line, a) of
                 (Nothing, [first]) ->
-                    ( { model | linesState = Ready, lines = a, line = Just first } , Storage.saveLine storage None (Just first) )
+                    ( { model | linesState = Shared.Ready, lines = a, line = Just first } , Storage.saveLine storage None (Just first) )
                 _ ->
-                    ( { model | linesState = Ready, lines = a } , Cmd.none )
+                    ( { model | linesState = Shared.Ready, lines = a } , Cmd.none )
         StartCallersFetch ->
             ( model , OdorikApi.fetchCallers storage.odorikApi CallersFetched )
         CallersFetched (Err err) ->
-            ( { model | callersState = Error <| OdorikApi.errorToString err } , Cmd.none )
+            ( { model | callersState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         CallersFetched (Ok a) ->
-            ( { model | callersState = Ready, callers = a } , Cmd.none )
+            ( { model | callersState = Shared.Ready, callers = a } , Cmd.none )
         StartSpeedDialsFetch ->
             ( model , OdorikApi.fetchSpeedDials storage.odorikApi SpeedDialsFetched )
         SpeedDialsFetched (Err err) ->
-            ( { model | speedDialsState = Error <| OdorikApi.errorToString err } , Cmd.none )
+            ( { model | speedDialsState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         SpeedDialsFetched (Ok a) ->
-            ( { model | speedDialsState = Ready, speedDials = a } , Storage.saveSpeedDials storage None a )
+            ( { model | speedDialsState = Shared.Ready, speedDials = a } , Storage.saveSpeedDials storage None a )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -227,9 +222,6 @@ dropdownConfig items selectionFromModel dropdownMsg itemPickedMsg =
             , spacing 0
             ]
 
-        itemToPrompt item =
-            text item
-
         itemToElement selected highlighted i =
             let
                 bgColor =
@@ -255,7 +247,7 @@ dropdownConfig items selectionFromModel dropdownMsg itemPickedMsg =
         , selectionFromModel = selectionFromModel
         , dropdownMsg = dropdownMsg
         , onSelectMsg = itemPickedMsg
-        , itemToPrompt = itemToPrompt
+        , itemToPrompt = text
         , itemToElement = itemToElement
         }
         |> Dropdown.withContainerAttributes containerAttrs
@@ -286,9 +278,6 @@ callerConfig =
             , spacing 0
             ]
 
-        itemToPrompt item =
-            text <| "(" ++ String.fromInt item.shortcut ++ ") " ++ item.name
-
         itemToElement selected highlighted item =
             let
                 bgColor =
@@ -301,30 +290,14 @@ callerConfig =
                     else
                         rgb255 255 255 255
             in
-            column [ width fill ]
-                [ el
-                    [ Background.color bgColor
-                    , padding 8
-                    , spacing 10
-                    , width fill
-                    ]
-                    (text <| "(" ++ String.fromInt item.shortcut ++ ") " ++ item.name)
-                , el
-                    [ Background.color bgColor
-                    , padding 8
-                    , spacing 10
-                    , width fill
-                    , Font.size 16
-                    ]
-                    (text item.number)
-                ]
+            Shared.speedDialToElement [ Background.color bgColor ] item
     in
     Dropdown.basic
         { itemsFromModel = items
         , selectionFromModel = selectionFromModel
         , dropdownMsg = dropdownMsg
         , onSelectMsg = itemPickedMsg
-        , itemToPrompt = itemToPrompt
+        , itemToPrompt = text << Shared.speedDialToLabel
         , itemToElement = itemToElement
         }
         |> Dropdown.withContainerAttributes containerAttrs
@@ -336,22 +309,6 @@ lineConfig : Dropdown.Config String Msg Model
 lineConfig =
     dropdownConfig (\m -> m.lines) .line LineDropdownMsg LinePicked
 
-labelWithSpinner : FetchState -> String -> List (Element Msg)
-labelWithSpinner s t =
-    case s of
-        Fetching ->
-            [ paragraph [ Font.alignLeft ] [ text t ]
-            , paragraph [ Font.alignRight ] [ text "(loading...)" ]
-            ]
-        Ready ->
-            [ paragraph [ Font.alignLeft ] [ text t ]
-            ]
-        Error e ->
-            [ paragraph [ Font.alignLeft ] [ text t ]
-            , paragraph [ Font.alignRight ] [ text <| "(error: " ++ e ++ ")" ]
-            ]
-
-
 settingsArea : Model -> List (Element Msg)
 settingsArea m =
     case m.state of
@@ -361,7 +318,7 @@ settingsArea m =
             [ column [ width fill, spacing 20 ]
                 [ column [ width fill, spacing 10 ]
                     -- FIXME: should reflect both speedDialsState and callersState (probably with UI icons)
-                    [ row [ width fill ] <| labelWithSpinner m.speedDialsState "Default caller"
+                    [ row [ width fill ] <| Shared.labelWithSpinner m.speedDialsState "Default caller"
                     , Dropdown.view callerConfig m m.callerDropdownState
                     , link Attr.link
                         { url = "https://www.odorik.cz/ucet/rychle_kontakty.html"
@@ -369,7 +326,7 @@ settingsArea m =
                         }
                     ]
                 , column [ width fill, spacing 10 ]
-                    [ row [ width fill ] <| labelWithSpinner m.linesState "Line"
+                    [ row [ width fill ] <| Shared.labelWithSpinner m.linesState "Line"
                     , Dropdown.view lineConfig m m.lineDropdownState
                     ]
                 ]

@@ -37,7 +37,7 @@ type alias Model =
 
 parseNumber : Request -> Maybe String
 parseNumber req =
-    case Dict.get "number" req.query of
+    case req.url.fragment of
         Just str -> case (Base64.decode str) of
             Ok num -> Just num
             Err _ -> Nothing
