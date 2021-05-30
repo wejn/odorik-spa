@@ -4,10 +4,10 @@ import Attr
 import Browser.Dom as Dom
 import Dropdown
 import Element exposing (..)
-import Element.Input as Input
+import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Element.Background as Background
+import Element.Input as Input
 import Html
 import Html.Events
 import Html.Attributes
@@ -130,7 +130,7 @@ update req storage msg model =
             in
             ( { model | lineDropdownState = state }, cmd )
         StartLinesFetch ->
-            ( model , OdorikApi.fetchLines storage.odorikApi LinesFetched )
+            ( { model | linesState = Shared.Fetching } , OdorikApi.fetchLines storage.odorikApi LinesFetched )
         LinesFetched (Err err) ->
             ( { model | linesState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         LinesFetched (Ok a) ->
@@ -140,13 +140,13 @@ update req storage msg model =
                 _ ->
                     ( { model | linesState = Shared.Ready, lines = a } , Cmd.none )
         StartCallersFetch ->
-            ( model , OdorikApi.fetchCallers storage.odorikApi CallersFetched )
+            ( { model | callersState = Shared.Fetching } , OdorikApi.fetchCallers storage.odorikApi CallersFetched )
         CallersFetched (Err err) ->
             ( { model | callersState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         CallersFetched (Ok a) ->
             ( { model | callersState = Shared.Ready, callers = a } , Cmd.none )
         StartSpeedDialsFetch ->
-            ( model , OdorikApi.fetchSpeedDials storage.odorikApi SpeedDialsFetched )
+            ( { model | speedDialsState = Shared.Fetching } , OdorikApi.fetchSpeedDials storage.odorikApi SpeedDialsFetched )
         SpeedDialsFetched (Err err) ->
             ( { model | speedDialsState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         SpeedDialsFetched (Ok a) ->
@@ -177,7 +177,7 @@ loginPage model =
             { onPress = Just StartLogin
             , label = el [ centerX ] <| text "Login"
             }
-            , el Attr.error <| text model.lastError
+        , el Attr.error <| text model.lastError
         ]
 
 loginArea : Storage -> Model -> List (Element Msg)
@@ -189,9 +189,9 @@ loginArea storage m =
                 [ loginPage m ]
             ]
         LoggedIn ->
-            [ row [ spacing 10 ]
+            [ row [ spacing 10, width fill ]
                 [ paragraph
-                    [ width <| fillPortion 2, Font.center ]
+                    [ width <| fillPortion 2, Font.alignLeft ]
                     [ text ("Logged in as: " ++ (OdorikApi.getUser storage.odorikApi |> Maybe.withDefault "???")) ]
                 , paragraph
                     [ width <| fillPortion 1, Font.center ]
@@ -318,15 +318,15 @@ settingsArea m =
             [ column [ width fill, spacing 20 ]
                 [ column [ width fill, spacing 10 ]
                     -- FIXME: should reflect both speedDialsState and callersState (probably with UI icons)
-                    [ row [ width fill ] <| Shared.labelWithSpinner m.speedDialsState "Default caller"
+                    [ row [ width fill ] <| Shared.labelWithSpinner m.speedDialsState "Default caller" (Just StartSpeedDialsFetch)
                     , Dropdown.view callerConfig m m.callerDropdownState
-                    , link Attr.link
+                    , newTabLink Attr.link
                         { url = "https://www.odorik.cz/ucet/rychle_kontakty.html"
                         , label = el [] <| text "Edit your speed dials."
                         }
                     ]
                 , column [ width fill, spacing 10 ]
-                    [ row [ width fill ] <| Shared.labelWithSpinner m.linesState "Line"
+                    [ row [ width fill ] <| Shared.labelWithSpinner m.linesState "Line" (Just StartLinesFetch)
                     , Dropdown.view lineConfig m m.lineDropdownState
                     ]
                 ]

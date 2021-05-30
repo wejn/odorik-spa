@@ -14,11 +14,13 @@ module Shared exposing
     , labelWithSpinner
     )
 
+import Attr
 import Base64
 import Element exposing (..)
-import Element.Border as Border
 import Element.Background as Background
+import Element.Border as Border
 import Element.Font as Font
+import Element.Input as Input
 import Gen.Route as Route
 import Html exposing (Html)
 import Html.Events
@@ -177,17 +179,26 @@ speedDialToElement attr item =
             (text item.number)
         ]
 
-labelWithSpinner : FetchState -> String -> List (Element msg)
-labelWithSpinner s t =
-    case s of
+labelWithSpinner : FetchState -> String -> Maybe msg -> List (Element msg)
+labelWithSpinner state label reloadMsg =
+    case state of
         Fetching ->
-            [ paragraph [ Font.alignLeft ] [ text t ]
+            [ paragraph [ Font.alignLeft ] [ text label ]
             , paragraph [ Font.alignRight ] [ text "(loading...)" ]
             ]
         Ready ->
-            [ paragraph [ Font.alignLeft ] [ text t ]
-            ]
+            case reloadMsg of
+                Nothing ->
+                    [ paragraph [ Font.alignLeft ] [ text label ]
+                    ]
+                Just a ->
+                    [ paragraph [ Font.alignLeft ] [ text label ]
+                    , Input.button Attr.linkLikeButton
+                        { onPress = Just a
+                        , label = el [ centerX ] <| text "Reload"
+                        }
+                    ]
         Error e ->
-            [ paragraph [ Font.alignLeft ] [ text t ]
+            [ paragraph [ Font.alignLeft ] [ text label ]
             , paragraph [ Font.alignRight ] [ text <| "(error: " ++ e ++ ")" ]
             ]
