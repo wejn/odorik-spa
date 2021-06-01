@@ -76,13 +76,16 @@ subscriptions : Request -> Model -> Sub Msg
 subscriptions _ _ =
     Storage.onChange StorageUpdated
 
+menuHeight : Length
+menuHeight = px 40
 
 view : Request -> String -> Element msg -> View msg
 view req title contents =
     { title = title
     , attributes = [width fill, height fill, inFront <| menuGen req]
     , element =
-        el [ centerX , centerY, padding 50 ] <| contents
+        el [ centerX , centerY, padding 50, scrollbars ] <|
+            column [] [ row [ width fill, height <| menuHeight ] [ text "" ], contents ]
     }
 
 menuGen : Request -> Element msg
@@ -99,7 +102,7 @@ menuGen req =
             , label = el
                 -- "logo" element
                 []
-                <| image [ Border.rounded 8, clip, width <| px 80, height <| px 80 ]
+                <| image [ Border.rounded 8, clip, width <| menuHeight, height <| menuHeight ]
                     { src = "icon.png"
                     , description = "odorik icon"
                     } }
