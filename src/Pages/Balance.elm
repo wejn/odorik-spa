@@ -22,7 +22,7 @@ page shared req =
     Page.element
         { init = init req shared.storage
         , update = update req shared.storage
-        , view = view shared.storage
+        , view = view req shared.storage
         , subscriptions = subscriptions
         }
 
@@ -33,8 +33,7 @@ type State
     | Failure String
 
 type alias Model =
-    { menu : Element Msg
-    , state : State
+    { state : State
     }
 
 init : Request -> Storage -> ( Model, Cmd Msg )
@@ -42,13 +41,9 @@ init req storage =
     case OdorikApi.haveValidCredentials storage.odorikApi of
         True ->
             update req storage (FetchBalance) <|
-                { menu = Shared.menuGen req , state = Loading }
+                { state = Loading }
         False ->
-            ( { menu = Shared.menuGen req
-              , state = NeedLogin
-              }
-            , Cmd.none
-            )
+            ( { state = NeedLogin } , Cmd.none )
 
 type Msg
     = None
@@ -96,11 +91,7 @@ balanceHelper m =
             ]
         ]
 
-view : Storage -> Model -> View Msg
-view storage m =
-    { title = "Balance"
-    , attributes = [width fill, height fill, inFront m.menu]
-    , element =
-        el [ centerX , centerY, padding 50 ] <|
-            column [ spacing 40 ] (balanceHelper m)
-    }
+view : Request -> Storage -> Model -> View Msg
+view req storage m =
+    Shared.view req "Balance" <|
+        column [ spacing 40 ] (balanceHelper m)

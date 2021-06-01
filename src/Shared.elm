@@ -5,13 +5,13 @@ module Shared exposing
     , init
     , subscriptions
     , update
-    , menuGen
     , onEnter
     , parseFragmentToSpeedDial
     , speedDialToLabel
     , speedDialToElement
     , FetchState(..)
     , labelWithSpinner
+    , view
     )
 
 import Attr
@@ -29,6 +29,7 @@ import OdorikApi
 import Request exposing (Request)
 import Storage exposing (Storage)
 import Url
+import View exposing (View)
 
 
 type alias Flags =
@@ -75,6 +76,14 @@ subscriptions : Request -> Model -> Sub Msg
 subscriptions _ _ =
     Storage.onChange StorageUpdated
 
+
+view : Request -> String -> Element msg -> View msg
+view req title contents =
+    { title = title
+    , attributes = [width fill, height fill, inFront <| menuGen req]
+    , element =
+        el [ centerX , centerY, padding 50 ] <| contents
+    }
 
 menuGen : Request -> Element msg
 menuGen req =

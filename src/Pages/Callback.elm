@@ -23,7 +23,7 @@ page shared req =
     Page.element
         { init = init req shared.storage
         , update = update req shared.storage
-        , view = view shared.storage
+        , view = view req shared.storage
         , subscriptions = subscriptions
         }
 
@@ -32,8 +32,7 @@ type State
     | NeedLogin
 
 type alias Model =
-    { menu : Element Msg
-    , state : State
+    { state : State
     , parseWarning : Maybe String
     , incomingTarget : Maybe OdorikApi.SpeedDial -- incoming via fragment
     , target : Maybe OdorikApi.SpeedDial -- selected in dropbox
@@ -65,8 +64,7 @@ init req storage =
                 False -> NeedLogin
         caller = OdorikApi.getCaller storage.odorikApi
     in
-    (   { menu = Shared.menuGen req
-        , state = state
+    (   { state = state
         , parseWarning = warning
         , incomingTarget = incoming
         , target = incoming
@@ -258,16 +256,12 @@ callbackForm m =
         ]
     ]
 
-view : Storage -> Model -> View Msg
-view storage m =
-    { title = "Callback"
-    , attributes = [width fill, height fill, inFront m.menu]
-    , element =
-        el [ centerX , centerY, padding 50 ] <|
-            column [ spacing 40 ]
-                (  parseWarningIfPresent m
-                ++ case m.state of
-                    NeedLogin -> loginForm m
-                    LoggedIn -> callbackForm m
-                )
-    }
+view : Request -> Storage -> Model -> View Msg
+view req storage m =
+    Shared.view req "Callback" <|
+        column [ width fill, height fill, spacing 40 ]
+            (  parseWarningIfPresent m
+            ++ case m.state of
+                NeedLogin -> loginForm m
+                LoggedIn -> callbackForm m
+            )

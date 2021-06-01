@@ -21,7 +21,7 @@ page shared req =
     Page.element
         { init = init req
         , update = update shared.storage
-        , view = view shared.storage
+        , view = view req shared.storage
         , subscriptions = subscriptions
         }
 
@@ -32,7 +32,7 @@ page shared req =
 
 type alias Model =
     { number : Maybe String
-    , menu : Element Msg }
+    }
 
 
 parseNumber : Request -> Maybe String
@@ -45,9 +45,7 @@ parseNumber req =
 
 init : Request -> ( Model, Cmd Msg )
 init req =
-    ( { number = parseNumber req
-      , menu = Shared.menuGen req}
-    , Cmd.none )
+    ( { number = parseNumber req } , Cmd.none )
 
 
 
@@ -75,18 +73,14 @@ subscriptions _ =
 
 -- VIEW
 
-view : Storage -> Model -> View Msg
-view storage m =
-    { title = "Homepage"
-    , attributes = [width fill, height fill, inFront m.menu]
-    , element =
-        el [ centerX , centerY, padding 50 ] <|
-            column [ spacing 40 ]
-            [ paragraph
-              []
-              [ text "Here be homepage." ]
-            , paragraph
-              []
-              [ text (Maybe.withDefault "" m.number) ]
-            ]
-    }
+view : Request -> Storage -> Model -> View Msg
+view req storage m =
+    Shared.view req "Homepage" <|
+        column [ spacing 40 ]
+        [ paragraph
+          []
+          [ text "Here be homepage." ]
+        , paragraph
+          []
+          [ text (Maybe.withDefault "" m.number) ]
+        ]

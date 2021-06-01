@@ -24,7 +24,7 @@ page shared req =
     Page.element
         { init = init req shared.storage
         , update = update req shared.storage
-        , view = view shared.storage
+        , view = view req shared.storage
         , subscriptions = subscriptions
         }
 
@@ -33,8 +33,7 @@ type State
     | NeedLogin
 
 type alias Model =
-    { menu : Element Msg
-    , state : State
+    { state : State
     , username : String
     , password : String
     , lastError : String
@@ -61,8 +60,7 @@ fetchAfterLogin =
 init : Request -> Storage -> ( Model, Cmd Msg )
 init req storage =
     let
-        m = { menu = Shared.menuGen req
-            , state = NeedLogin
+        m = { state = NeedLogin
             , username = ""
             , password = ""
             , lastError = ""
@@ -259,11 +257,7 @@ settingsArea m =
                 ]
             ]
 
-view : Storage -> Model -> View Msg
-view storage m =
-    { title = "Settings"
-    , attributes = [width fill, height fill, inFront m.menu]
-    , element =
-        el [ centerX , centerY, padding 50 ] <|
-            column [ spacing 40 ] ( loginArea storage m ++ settingsArea m)
-    }
+view : Request -> Storage -> Model -> View Msg
+view req storage m =
+    Shared.view req "Settings" <|
+        column [ spacing 40 ] ( loginArea storage m ++ settingsArea m )
