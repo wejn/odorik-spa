@@ -1,7 +1,5 @@
 module Pages.Home_ exposing (Model, Msg, init, page, update, view)
 
-import Base64
-import Dict
 import Element exposing (..)
 import Element.Input as Input
 import Element.Border as Border
@@ -31,21 +29,13 @@ page shared req =
 
 
 type alias Model =
-    { number : Maybe String
+    {
     }
 
 
-parseNumber : Request -> Maybe String
-parseNumber req =
-    case req.url.fragment of
-        Just str -> case (Base64.decode str) of
-            Ok num -> Just num
-            Err _ -> Nothing
-        Nothing -> Nothing
-
 init : Request -> ( Model, Cmd Msg )
 init req =
-    ( { number = parseNumber req } , Cmd.none )
+    ( { } , Cmd.none )
 
 
 
@@ -80,7 +70,4 @@ view req storage m =
         [ paragraph
           []
           [ text "Here be homepage." ]
-        , paragraph
-          []
-          [ text (Maybe.withDefault "" m.number) ]
         ]
