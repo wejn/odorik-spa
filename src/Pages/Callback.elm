@@ -254,7 +254,7 @@ callbackForm m =
                 }
             ]
         , row [ width fill ] <| Shared.labelWithSpinner m.balanceState ("Balance: " ++ Maybe.withDefault "??" m.balance) (Just StartBalanceFetch)
-        -- , row [ width fill ] <| Shared.labelWithSpinner m.speedDialsState ("SpeedDials...") (Just StartSpeedDialsFetch)
+        , row [ width fill ] <| Shared.labelWithSpinner m.speedDialsState ("SpeedDials...") (Just StartSpeedDialsFetch)
         ]
     ]
 
