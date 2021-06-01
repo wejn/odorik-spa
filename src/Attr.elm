@@ -38,7 +38,7 @@ dropdownAugment : Dropdown.Config item msg model -> Dropdown.Config item msg mod
 dropdownAugment c =
     let
         containerAttrs =
-            [ width (px 300) ]
+            [ width fill ]
 
         selectAttrs =
             [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
