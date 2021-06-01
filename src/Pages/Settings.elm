@@ -203,111 +203,38 @@ loginArea storage m =
                 ]
             ]
 
-dropdownConfig : (Model -> List String) -> (Model -> Maybe String) -> (Dropdown.Msg String -> Msg) -> (Maybe String -> Msg) -> Dropdown.Config String Msg Model
-dropdownConfig items selectionFromModel dropdownMsg itemPickedMsg =
-    let
-        containerAttrs =
-            [ width (px 300) ]
+callerConfig : Dropdown.Config OdorikApi.SpeedDial Msg Model
+callerConfig =
+    Dropdown.basic
+        { itemsFromModel = (\m -> m.callers ++ m.speedDials)
+        , selectionFromModel = .caller
+        , dropdownMsg = CallerDropdownMsg
+        , onSelectMsg = CallerPicked
+        , itemToPrompt = text << Shared.speedDialToLabel
+        , itemToElement = (\selected highlighted item ->
+            Shared.speedDialToElement [ Background.color <| Attr.dropdownBackgroundColor selected highlighted ] item )
+        }
+        |> Attr.dropdownAugment
 
-        selectAttrs =
-            [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
-
-        searchAttrs =
-            [ Border.width 0, padding 0 ]
-
-        listAttrs =
-            [ Border.width 1
-            , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
-            , width fill
-            , spacing 0
-            ]
-
-        itemToElement selected highlighted i =
-            let
-                bgColor =
-                    if selected then
-                        rgb255 100 100 100
-
-                    else if highlighted then
-                        rgb255 250 250 250
-
-                    else
-                        rgb255 255 255 255
-            in
+lineConfig : Dropdown.Config String Msg Model
+lineConfig =
+    Dropdown.basic
+        { itemsFromModel = (\m -> m.lines)
+        , selectionFromModel = .line
+        , dropdownMsg = LineDropdownMsg
+        , onSelectMsg = LinePicked
+        , itemToPrompt = text
+        , itemToElement = (\selected highlighted item ->
             el
-                [ Background.color bgColor
+                [ Background.color <| Attr.dropdownBackgroundColor selected highlighted
                 , padding 8
                 , spacing 10
                 , width fill
                 ]
-                (text i)
-    in
-    Dropdown.basic
-        { itemsFromModel = items
-        , selectionFromModel = selectionFromModel
-        , dropdownMsg = dropdownMsg
-        , onSelectMsg = itemPickedMsg
-        , itemToPrompt = text
-        , itemToElement = itemToElement
+                (text item) )
+
         }
-        |> Dropdown.withContainerAttributes containerAttrs
-        |> Dropdown.withSelectAttributes selectAttrs
-        |> Dropdown.withListAttributes listAttrs
-        |> Dropdown.withSearchAttributes searchAttrs
-
-callerConfig : Dropdown.Config OdorikApi.SpeedDial Msg Model
-callerConfig =
-    let
-        items = (\m -> m.callers ++ m.speedDials)
-        selectionFromModel = .caller
-        dropdownMsg = CallerDropdownMsg
-        itemPickedMsg = CallerPicked
-        containerAttrs =
-            [ width (px 300) ]
-
-        selectAttrs =
-            [ Border.width 1, Border.rounded 5, paddingXY 16 8, spacing 10, width fill ]
-
-        searchAttrs =
-            [ Border.width 0, padding 0 ]
-
-        listAttrs =
-            [ Border.width 1
-            , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
-            , width fill
-            , spacing 0
-            ]
-
-        itemToElement selected highlighted item =
-            let
-                bgColor =
-                    if selected then
-                        rgb255 100 100 100
-
-                    else if highlighted then
-                        rgb255 250 250 250
-
-                    else
-                        rgb255 255 255 255
-            in
-            Shared.speedDialToElement [ Background.color bgColor ] item
-    in
-    Dropdown.basic
-        { itemsFromModel = items
-        , selectionFromModel = selectionFromModel
-        , dropdownMsg = dropdownMsg
-        , onSelectMsg = itemPickedMsg
-        , itemToPrompt = text << Shared.speedDialToLabel
-        , itemToElement = itemToElement
-        }
-        |> Dropdown.withContainerAttributes containerAttrs
-        |> Dropdown.withSelectAttributes selectAttrs
-        |> Dropdown.withListAttributes listAttrs
-        |> Dropdown.withSearchAttributes searchAttrs
-
-lineConfig : Dropdown.Config String Msg Model
-lineConfig =
-    dropdownConfig (\m -> m.lines) .line LineDropdownMsg LinePicked
+        |> Attr.dropdownAugment
 
 settingsArea : Model -> List (Element Msg)
 settingsArea m =
