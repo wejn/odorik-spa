@@ -1,5 +1,9 @@
 const app = Elm.Main.init({
-  flags: JSON.parse(localStorage.getItem('storage'))
+  flags: {
+    storage: JSON.parse(localStorage.getItem('storage')),
+    windowHeight: window.innerHeight,
+    windowWidth: window.innerWidth
+  }
 })
 
 app.ports.save.subscribe(storage => {

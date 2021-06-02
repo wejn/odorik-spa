@@ -22,7 +22,7 @@ page shared req =
     Page.element
         { init = init req shared.storage
         , update = update req shared.storage
-        , view = view req shared.storage
+        , view = view req shared
         , subscriptions = subscriptions
         }
 
@@ -91,7 +91,7 @@ balanceHelper m =
             ]
         ]
 
-view : Request -> Storage -> Model -> View Msg
-view req storage m =
-    Shared.view req "Balance" <|
+view : Request -> Shared.Model -> Model -> View Msg
+view req shared m =
+    Shared.view shared req "Balance" <|
         column [ width fill, height fill, spacing 40 ] (balanceHelper m)

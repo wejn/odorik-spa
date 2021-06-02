@@ -16,6 +16,7 @@ module Shared exposing
 
 import Attr
 import Base64
+import Browser.Events exposing (onResize)
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -33,11 +34,16 @@ import View exposing (View)
 
 
 type alias Flags =
-    Json.Value
+    { storage : Json.Value
+    , windowHeight : Int
+    , windowWidth : Int
+    }
 
 
 type alias Model =
     { storage : Storage
+    , width : Int
+    , height : Int
     }
 
 type alias IncomingFragment =
@@ -54,13 +60,17 @@ type FetchState
 
 init : Request -> Flags -> ( Model, Cmd Msg )
 init _ flags =
-    ( { storage = Storage.fromJson flags }
+    (   { storage = Storage.fromJson flags.storage
+        , width = flags.windowWidth
+        , height = flags.windowHeight
+        }
     , Cmd.none
     )
 
 
 type Msg
     = StorageUpdated Storage
+    | WindowResized Int Int
 
 
 update : Request -> Msg -> Model -> ( Model, Cmd Msg )
@@ -70,32 +80,51 @@ update _ msg model =
             ( { model | storage = storage }
             , Cmd.none
             )
+        WindowResized w h ->
+            ( { model | width = w, height = h }, Cmd.none )
 
 
 subscriptions : Request -> Model -> Sub Msg
 subscriptions _ _ =
-    Storage.onChange StorageUpdated
+    Sub.batch
+        [ Storage.onChange StorageUpdated
+        , onResize WindowResized
+        ]
 
 menuHeight : Length
 menuHeight = px 40
 
-view : Request -> String -> Element msg -> View msg
-view req title contents =
+pageMaxWidth : Int
+pageMaxWidth = 800
+
+view : Model -> Request -> String -> Element msg -> View msg
+view m req title contents =
     { title = title
-    , attributes = [width fill, height fill, inFront <| menuGen req]
+    , attributes =
+        [ width <| minimum m.width (maximum pageMaxWidth fill)
+        , height <| minimum m.height fill
+        , inFront <| menuGen req
+        ]
     , element =
-        el [ centerX , centerY, padding 50, scrollbars ] <|
-            column [ width fill, height fill ] [ row [ width fill, height <| menuHeight ] [ text "" ], contents ]
+        el
+            [ width <| maximum pageMaxWidth fill
+            , centerX
+            , centerY
+            , padding 50 ] <|
+            column [ width fill, height fill ]
+                [ row [ width fill, height <| menuHeight ] [ text "" ]
+                , contents
+                ]
     }
 
 menuGen : Request -> Element msg
 menuGen req =
     row
         [ centerX
-        , width <| maximum 800 fill
+        , width <| maximum pageMaxWidth fill
         , padding 10
         , spacing 10
-        , Background.color <| rgb255 255 255 255
+        , Background.color <| rgb255 250 250 250
         ]
         [ link [ width <| fillPortion 1 ]
             { url = (Route.toHref Route.Home_)

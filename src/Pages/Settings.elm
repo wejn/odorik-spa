@@ -24,7 +24,7 @@ page shared req =
     Page.element
         { init = init req shared.storage
         , update = update req shared.storage
-        , view = view req shared.storage
+        , view = view req shared
         , subscriptions = subscriptions
         }
 
@@ -257,7 +257,7 @@ settingsArea m =
                 ]
             ]
 
-view : Request -> Storage -> Model -> View Msg
-view req storage m =
-    Shared.view req "Settings" <|
-        column [ width fill, height fill, spacing 40 ] ( loginArea storage m ++ settingsArea m )
+view : Request -> Shared.Model -> Model -> View Msg
+view req shared m =
+    Shared.view shared req "Settings" <|
+        column [ width fill, height fill, spacing 40 ] ( loginArea shared.storage m ++ settingsArea m )

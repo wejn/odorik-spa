@@ -19,7 +19,7 @@ page shared req =
     Page.element
         { init = init req
         , update = update shared.storage
-        , view = view req shared.storage
+        , view = view req shared
         , subscriptions = subscriptions
         }
 
@@ -63,9 +63,9 @@ subscriptions _ =
 
 -- VIEW
 
-view : Request -> Storage -> Model -> View Msg
-view req storage m =
-    Shared.view req "Homepage" <|
+view : Request -> Shared.Model -> Model -> View Msg
+view req shared m =
+    Shared.view shared req "Homepage" <|
         column [ width fill, height fill, spacing 40 ]
         [ paragraph
           []
