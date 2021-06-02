@@ -118,7 +118,7 @@ update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
 update req storage msg model =
     case msg of
         None -> ( model , Cmd.none )
-        Logout -> ( { model | state = NeedLogin, caller = Nothing, line = Nothing } , Storage.logout storage )
+        Logout -> ( { model | state = NeedLogin, caller = Nothing, line = Nothing, manualCaller = Nothing, callerText = "" } , Storage.logout storage )
         StartLogin -> ( model , OdorikApi.verifyCredentials VerifyLogin model.username model.password )
         VerifyLogin (Ok _) -> ( model , Storage.login storage FinishLogin model.username model.password )
         VerifyLogin (Err err) -> ( { model | lastError = OdorikApi.errorToString err} , Cmd.none )
