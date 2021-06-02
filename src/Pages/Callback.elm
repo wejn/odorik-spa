@@ -1,4 +1,4 @@
-module Pages.Callback exposing (Model, Msg, init, page, update, view)
+module Pages.Callback exposing (Model, Msg, init, page, update, view, changedUrl)
 
 import Attr
 import Dropdown
@@ -16,6 +16,7 @@ import Request exposing (Request)
 import Shared
 import Storage exposing (Storage)
 import Task
+import Url exposing (Url)
 import View exposing (View)
 
 page : Shared.Model -> Request -> Page.With Model Msg
@@ -90,6 +91,7 @@ init req storage =
         }
     , Cmd.batch
         [ Task.succeed StartBalanceFetch |> Task.perform identity
+        , Task.succeed (ChangedUrl req.url) |> Task.perform identity
         ]
     )
 
@@ -106,7 +108,10 @@ type Msg
     | SpeedDialsFetched (OdorikApi.ApiResponse (List OdorikApi.SpeedDial))
     | TargetEdited String
     | CallerEdited String
+    | ChangedUrl Url
 
+changedUrl : Url -> Msg
+changedUrl u = ChangedUrl u
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
 update req storage msg model =
@@ -146,6 +151,20 @@ update req storage msg model =
                 tgt = Just <| stringToManualSpeedDial s
             in
                 ( { model | callerText = s, manualCaller = tgt, caller = tgt }, Cmd.none )
+        ChangedUrl url ->
+            let
+                (warning, incoming) =
+                    case Shared.parseFragmentToSpeedDial req.url of
+                        Err str -> (Just str, Nothing)
+                        Ok sd -> (Nothing, sd)
+            in
+            ( { model
+                | parseWarning = warning
+                , incomingTarget = incoming
+                , target = incoming
+                , targetText = Maybe.withDefault "" (Maybe.map .number incoming)
+                }
+            , Cmd.none )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =

@@ -6,6 +6,8 @@ import Effect
 import Gen.Model
 import Gen.Pages as Pages
 import Gen.Route as Route
+import Gen.Msg as PageMessages
+import Pages.Callback as Callback
 import Request
 import Shared
 import Url exposing (Url)
@@ -88,7 +90,16 @@ update msg model =
                 )
 
             else
-                ( { model | url = url }, Cmd.none )
+                if Route.fromUrl url == Route.Callback then
+                    let
+                        ( page, effect ) =
+                            Pages.update (PageMessages.Callback (Callback.changedUrl url)) model.page model.shared url model.key
+                    in
+                        ( { model | url = url, page = page }
+                        , Effect.toCmd ( Shared, Page ) effect
+                        )
+                else
+                    ( { model | url = url }, Cmd.none )
 
         Shared sharedMsg ->
             let
