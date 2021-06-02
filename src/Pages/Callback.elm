@@ -286,6 +286,7 @@ callbackForm m =
         , callbackStateHelper m.callbackState
         , row [ width fill ] <| Shared.labelWithSpinner m.balanceState ("Balance: " ++ Maybe.withDefault "??" m.balance) (Just StartBalanceFetch)
         , row [ width fill ] <| Shared.labelWithSpinner m.speedDialsState ("SpeedDials...") (Just StartSpeedDialsFetch)
+        , row [ paddingXY 0 20, width fill ] [ text "" ] -- make space at the bottom
         ]
     ]
 
