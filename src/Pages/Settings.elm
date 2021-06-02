@@ -37,8 +37,10 @@ type alias Model =
     , username : String
     , password : String
     , lastError : String
-    , caller : Maybe OdorikApi.SpeedDial
+    , caller : Maybe OdorikApi.SpeedDial -- selected in dropbox
     , callerDropdownState : Dropdown.State OdorikApi.SpeedDial
+    , callerText : String -- text field contents
+    , manualCaller : Maybe OdorikApi.SpeedDial -- synthetic, added by editing text field
     , line : Maybe String
     , lineDropdownState : Dropdown.State String
     , callersState : Shared.FetchState
@@ -60,11 +62,21 @@ fetchAfterLogin =
 init : Request -> Storage -> ( Model, Cmd Msg )
 init req storage =
     let
+        caller = OdorikApi.getCaller storage.odorikApi
         m = { state = NeedLogin
             , username = ""
             , password = ""
             , lastError = ""
-            , caller = OdorikApi.getCaller storage.odorikApi
+            , caller = caller
+            , callerText = Maybe.withDefault "" (Maybe.map .number caller)
+            , manualCaller = caller |> Maybe.andThen (\c ->
+                case c.shortcut of
+                    0 -> Just c
+                    _ -> Nothing ) |> Maybe.andThen (\c ->
+                        if c.number == c.name then
+                            Nothing
+                        else
+                            Just c )
             , callerDropdownState = Dropdown.init "caller-dropdown"
             , line = OdorikApi.getLine storage.odorikApi
             , lineDropdownState = Dropdown.init "line-dropdown"
@@ -99,6 +111,7 @@ type Msg
     | CallersFetched (OdorikApi.ApiResponse (List OdorikApi.SpeedDial))
     | StartSpeedDialsFetch
     | SpeedDialsFetched (OdorikApi.ApiResponse (List OdorikApi.SpeedDial))
+    | CallerEdited String
 
 
 update : Request -> Storage -> Msg -> Model -> ( Model, Cmd Msg )
@@ -113,13 +126,20 @@ update req storage msg model =
         ChangeUserName u -> ( { model | username = u } , Cmd.none )
         ChangePassword p -> ( { model | password = p } , Cmd.none )
         UsernameEnter -> ( model, Task.attempt (\_ -> None) (Dom.focus "password") )
-        CallerPicked c -> ( { model | caller = c }, Storage.saveCaller storage None c )
+        CallerPicked c ->
+            ( { model | caller = c, manualCaller = Nothing, callerText = Maybe.withDefault "" (Maybe.map .number c) }
+            , Storage.saveCaller storage None c )
         CallerDropdownMsg sm ->
             let
                 ( state , cmd ) =
                     Dropdown.update callerConfig sm model model.callerDropdownState
             in
             ( { model | callerDropdownState = state }, cmd )
+        CallerEdited s ->
+            let
+                caller = Just <| Shared.stringToManualSpeedDial s
+            in
+            ( { model | callerText = s, manualCaller = caller, caller = caller }, Storage.saveCaller storage None caller )
         LinePicked l -> ( { model | line = l }, Storage.saveLine storage None l )
         LineDropdownMsg sm ->
             let
@@ -204,7 +224,7 @@ loginArea storage m =
 callerConfig : Dropdown.Config OdorikApi.SpeedDial Msg Model
 callerConfig =
     Dropdown.basic
-        { itemsFromModel = (\m -> m.callers ++ m.speedDials)
+        { itemsFromModel = (\m -> (Maybe.withDefault [] <| Maybe.map (\x -> [x]) m.manualCaller) ++ m.callers ++ m.speedDials)
         , selectionFromModel = .caller
         , dropdownMsg = CallerDropdownMsg
         , onSelectMsg = CallerPicked
@@ -244,6 +264,14 @@ settingsArea m =
                 [ column [ width fill, spacing 10 ]
                     -- FIXME: should reflect both speedDialsState and callersState (probably with UI icons)
                     [ row [ width fill ] <| Shared.labelWithSpinner m.speedDialsState "Default caller" (Just StartSpeedDialsFetch)
+                    , column [ width fill, spacing 10 ]
+                        [ Input.text []
+                            { onChange = CallerEdited
+                            , text = m.callerText
+                            , placeholder = Just <| Input.placeholder [] <| text "Used on callback page"
+                            , label = Input.labelHidden "Default caller" -- NOT using the spinner here because clicking on "Refresh" opens kbd on ios
+                            }
+                        ]
                     , Dropdown.view callerConfig m m.callerDropdownState
                     , newTabLink Attr.link
                         { url = "https://www.odorik.cz/ucet/rychle_kontakty.html"

@@ -74,13 +74,10 @@ init req storage =
         , caller = caller
         , manualCaller = Nothing
         , callerText = Maybe.withDefault "" (Maybe.map .number caller)
-        , defaultCaller =
-            case caller of
-                Nothing -> Nothing
-                Just c ->
-                    case c.shortcut of
-                        0 -> caller
-                        _ -> Nothing
+        , defaultCaller = caller |> Maybe.andThen (\c ->
+            case c.shortcut of
+                0 -> Just c
+                _ -> Nothing )
         , line = OdorikApi.getLine storage.odorikApi
         , balance = Nothing
         , balanceState = Shared.Fetching
@@ -143,12 +140,12 @@ update req storage msg model =
             ( { model | speedDialsState = Shared.Ready, speedDials = a } , Storage.saveSpeedDials storage None a )
         TargetEdited s ->
             let
-                tgt = Just <| stringToManualSpeedDial s
+                tgt = Just <| Shared.stringToManualSpeedDial s
             in
                 ( { model | targetText = s, manualTarget = tgt, target = tgt }, Cmd.none )
         CallerEdited s ->
             let
-                tgt = Just <| stringToManualSpeedDial s
+                tgt = Just <| Shared.stringToManualSpeedDial s
             in
                 ( { model | callerText = s, manualCaller = tgt, caller = tgt }, Cmd.none )
         ChangedUrl url ->
@@ -169,13 +166,6 @@ update req storage msg model =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
-
-stringToManualSpeedDial : String -> OdorikApi.SpeedDial
-stringToManualSpeedDial s =
-    { shortcut = 0
-    , number = s
-    , name = "Manual entry"
-    }
 
 parseWarningIfPresent : Model -> List (Element Msg)
 parseWarningIfPresent m =

@@ -12,6 +12,7 @@ module Shared exposing
     , FetchState(..)
     , labelWithSpinner
     , view
+    , stringToManualSpeedDial
     )
 
 import Attr
@@ -220,6 +221,13 @@ speedDialToElement attr item =
             )
             (text item.number)
         ]
+
+stringToManualSpeedDial : String -> OdorikApi.SpeedDial
+stringToManualSpeedDial s =
+    { shortcut = 0
+    , number = s
+    , name = "Manual entry"
+    }
 
 labelWithSpinner : FetchState -> String -> Maybe msg -> List (Element msg)
 labelWithSpinner state label reloadMsg =
