@@ -22,6 +22,14 @@ linkLikeButton =
     , Border.rounded 0
     ] ++ link
 
+info : List (Attribute msg)
+info =
+    [ Font.color <| rgb255 204 204 0 ]
+
+success : List (Attribute msg)
+success =
+    [ Font.color <| rgb255 0 204 0 ]
+
 error : List (Attribute msg)
 error =
     [ Font.color <| rgb255 204 0 0 ]

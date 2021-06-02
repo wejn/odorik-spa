@@ -21,6 +21,7 @@ module OdorikApi exposing
     , fetchSpeedDials
     , saveSpeedDials
     , getSpeedDials
+    , requestCallback
     )
 
 import Http
@@ -81,7 +82,11 @@ serverFromCreds m =
 
 apiUrlFromCreds : Model -> String -> List (UB.QueryParameter) -> String
 apiUrlFromCreds m api qp =
-    UB.custom (UB.CrossOrigin (serverFromCreds m)) [api] ([UB.string "user" (m.user |> Maybe.withDefault ""), UB.string "password" (m.pass |> Maybe.withDefault "")] ++ qp) Nothing
+    UB.custom (UB.CrossOrigin (serverFromCreds m)) [api] (
+        [ UB.string "user" (m.user |> Maybe.withDefault "")
+        , UB.string "password" (m.pass |> Maybe.withDefault "")
+        , UB.string "user_agent" "org.wejn.odorik"
+        ] ++ qp) Nothing
 
 errorToString : Http.Error -> String
 errorToString error =
@@ -266,3 +271,26 @@ saveSpeedDials m c = { m | speedDials = c }
 
 getSpeedDials : Model -> List SpeedDial
 getSpeedDials = .speedDials
+
+requestCallback : Model -> String -> String -> Maybe String -> (ApiResponse String -> msg) -> Cmd msg
+requestCallback model target caller line msg =
+    case haveValidCredentials model of
+        False ->
+            Task.succeed (msg (Err (Http.BadBody "not logged in"))) |> Task.perform identity
+        True ->
+            Task.attempt msg (Time.now |> Task.andThen (\time ->
+                -- XXX: normally I'd go about building a proper body, but Odorik accepts QS parameters, so meh.
+                -- one can use https://github.com/lucamug/elm-form-examples/blob/master/src/Example_2.elm
+                Http.task
+                    { body = Http.emptyBody
+                    , timeout = Nothing
+                    , headers = []
+                    , method = "POST"
+                    , url = (apiUrlFromCreds model "callback") <|
+                        ( (Maybe.withDefault [] (Maybe.map (\x -> [UB.string "line" x]) line)) ++
+                        [ UB.int "t" (Time.posixToMillis time)
+                        , UB.string "recipient" target
+                        , UB.string "caller" caller
+                        ] )
+                    , resolver = Http.stringResolver <| apiResolver (\x -> Ok x)
+                    } ) )

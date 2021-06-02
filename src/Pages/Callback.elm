@@ -32,6 +32,12 @@ type State
     = LoggedIn
     | NeedLogin
 
+type CallbackState
+    = Empty
+    | Success
+    | Error String
+    | Fetching
+
 type alias Model =
     { state : State
     , parseWarning : Maybe String
@@ -50,6 +56,7 @@ type alias Model =
     , targetDropdownState : Dropdown.State OdorikApi.SpeedDial
     , callerDropdownState : Dropdown.State OdorikApi.SpeedDial
     , speedDials : List OdorikApi.SpeedDial
+    , callbackState : CallbackState
     }
 
 init : Request -> Storage -> ( Model, Cmd Msg )
@@ -85,6 +92,7 @@ init req storage =
         , targetDropdownState = Dropdown.init "target-dropdown"
         , callerDropdownState = Dropdown.init "caller-dropdown"
         , speedDials = OdorikApi.getSpeedDials storage.odorikApi
+        , callbackState = Empty
         }
     , Cmd.batch
         [ Task.succeed StartBalanceFetch |> Task.perform identity
@@ -106,6 +114,8 @@ type Msg
     | TargetEdited String
     | CallerEdited String
     | ChangedUrl Url
+    | StartCallback
+    | GotCallback (OdorikApi.ApiResponse String)
 
 changedUrl : Url -> Msg
 changedUrl u = ChangedUrl u
@@ -162,6 +172,19 @@ update req storage msg model =
                 , targetText = Maybe.withDefault "" (Maybe.map .number incoming)
                 }
             , Cmd.none )
+        StartCallback ->
+                        if String.isEmpty model.targetText || String.isEmpty model.callerText then
+                            ( { model | callbackState = Error "need both target and caller filled out" }, Cmd.none )
+                        else
+                            if model.targetText == model.callerText then
+                                ( { model | callbackState = Error "need different target and caller" }, Cmd.none )
+                            else
+                                ( { model | callbackState = Fetching }
+                                , OdorikApi.requestCallback storage.odorikApi model.targetText model.callerText model.line GotCallback )
+        GotCallback (Err err) ->
+            ( { model | callbackState = Error <| OdorikApi.errorToString err } , Cmd.none )
+        GotCallback (Ok a) ->
+            ( { model | callbackState = Success } , Cmd.none )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -257,13 +280,22 @@ callbackForm m =
             [ Input.button
                 (width fill :: Attr.button)
                 { label = text "Callback"
-                , onPress = Just None -- FIXME
+                , onPress = Just StartCallback
                 }
             ]
+        , callbackStateHelper m.callbackState
         , row [ width fill ] <| Shared.labelWithSpinner m.balanceState ("Balance: " ++ Maybe.withDefault "??" m.balance) (Just StartBalanceFetch)
         , row [ width fill ] <| Shared.labelWithSpinner m.speedDialsState ("SpeedDials...") (Just StartSpeedDialsFetch)
         ]
     ]
+
+callbackStateHelper : CallbackState -> Element Msg
+callbackStateHelper c =
+    case c of
+        Empty -> row [ width fill ] [ text "" ]
+        Fetching -> row (Attr.info ++ [ width fill ]) [ text "Status: Requesting" ]
+        Success -> row (Attr.success ++ [width fill ]) [ text "Status: Success!" ]
+        Error err -> row (Attr.error ++ [ width fill]) [ text <| "Status: Failure: " ++ err ]
 
 view : Request -> Shared.Model -> Model -> View Msg
 view req shared m =
