@@ -66,7 +66,7 @@ subscriptions _ =
 view : Request -> Storage -> Model -> View Msg
 view req storage m =
     Shared.view req "Homepage" <|
-        column [ spacing 40 ]
+        column [ width fill, height fill, spacing 40 ]
         [ paragraph
           []
           [ text "Here be homepage." ]

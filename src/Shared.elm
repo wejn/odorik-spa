@@ -85,7 +85,7 @@ view req title contents =
     , attributes = [width fill, height fill, inFront <| menuGen req]
     , element =
         el [ centerX , centerY, padding 50, scrollbars ] <|
-            column [] [ row [ width fill, height <| menuHeight ] [ text "" ], contents ]
+            column [ width fill, height fill ] [ row [ width fill, height <| menuHeight ] [ text "" ], contents ]
     }
 
 menuGen : Request -> Element msg

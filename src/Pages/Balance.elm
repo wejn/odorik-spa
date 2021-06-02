@@ -94,4 +94,4 @@ balanceHelper m =
 view : Request -> Storage -> Model -> View Msg
 view req storage m =
     Shared.view req "Balance" <|
-        column [ spacing 40 ] (balanceHelper m)
+        column [ width fill, height fill, spacing 40 ] (balanceHelper m)

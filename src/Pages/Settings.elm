@@ -260,4 +260,4 @@ settingsArea m =
 view : Request -> Storage -> Model -> View Msg
 view req storage m =
     Shared.view req "Settings" <|
-        column [ spacing 40 ] ( loginArea storage m ++ settingsArea m )
+        column [ width fill, height fill, spacing 40 ] ( loginArea storage m ++ settingsArea m )
