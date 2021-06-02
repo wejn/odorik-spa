@@ -124,7 +124,8 @@ menuGen req =
         , width <| maximum pageMaxWidth fill
         , padding 10
         , spacing 10
-        , Background.color <| rgb255 250 250 250
+        , Border.rounded 8
+        , Background.color <| rgb255 240 240 240
         ]
         [ link [ width <| fillPortion 1 ]
             { url = (Route.toHref Route.Home_)
