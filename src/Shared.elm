@@ -91,8 +91,8 @@ subscriptions _ _ =
         , onResize WindowResized
         ]
 
-menuHeight : Length
-menuHeight = px 40
+menuHeight : Int
+menuHeight = 40
 
 pageMaxWidth : Int
 pageMaxWidth = 800
@@ -110,9 +110,9 @@ view m req title contents =
             [ width <| maximum pageMaxWidth fill
             , centerX
             , centerY
-            , padding 50 ] <|
+            , padding 10 ] <|
             column [ width fill, height fill ]
-                [ row [ width fill, height <| menuHeight ] [ text "" ]
+                [ row [ width fill, height <| px (menuHeight + 20) ] [ text "" ]
                 , contents
                 ]
     }
@@ -131,7 +131,7 @@ menuGen req =
             , label = el
                 -- "logo" element
                 []
-                <| image [ Border.rounded 8, clip, width <| menuHeight, height <| menuHeight ]
+                <| image [ Border.rounded 8, clip, width <| px menuHeight, height <| px menuHeight ]
                     { src = "icon.png"
                     , description = "odorik icon"
                     } }
