@@ -68,7 +68,7 @@ view req shared m =
     let
         odorikApi = "https://www.odorik.cz/w/api"
         blogPost = "https://wejn.org/FIXME/" -- FIXME
-        shortcut = "https://fixme.com/" -- FIXME
+        shortcut = "https://www.icloud.com/shortcuts/d1d59617f91f4e4b8ffb4c6753f231f8"
         source = "https://github.com/wejn/odorik-spa" -- FIXME
         monospaced = (\x -> el [ Font.family [ Font.monospace ], Background.color <| rgb255 242 242 242 ] x)
     in
