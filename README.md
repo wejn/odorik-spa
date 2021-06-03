@@ -24,5 +24,4 @@ It is [deployed on odorik.wejn.org](https://odorik.wejn.org/), use testing crede
 (l/p: `888`) to play with it.
 
 ## Credits
-© 2021 Michal Jirků
-Licensed under GNU AFFERO GENERAL PUBLIC LICENSE, Version 3
+© 2021 Michal Jirků, licensed under AGPL-3.0
