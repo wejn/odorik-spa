@@ -13,6 +13,7 @@ module Shared exposing
     , labelWithSpinner
     , view
     , stringToManualSpeedDial
+    , loginForm
     )
 
 import Attr
@@ -263,3 +264,23 @@ labelWithSpinner state label reloadMsg =
                         , label = Attr.crossIcon 20 20
                         }
                     ]
+
+loginForm : msg -> List (Element msg)
+loginForm m =
+    let
+        title = "Not logged in."
+        button = { label = text "Login", onPress = Just m }
+    in
+        [ paragraph
+            [Font.size 48, Font.center]
+            [ text title ]
+        , paragraph
+            [Font.size 24, Font.center]
+            [ text "" ]
+        , paragraph
+            [ Font.center ]
+            [ Input.button
+                Attr.button
+                button
+            ]
+        ]

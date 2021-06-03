@@ -201,26 +201,6 @@ parseWarningIfPresent m =
                 ]
             ]
 
-loginForm : Model -> List (Element Msg)
-loginForm m =
-    let
-        title = "Not logged in."
-        button = { label = text "Login", onPress = Just Login }
-    in
-        [ paragraph
-            [Font.size 48, Font.center]
-            [ text title ]
-        , paragraph
-            [Font.size 24, Font.center]
-            [ text "" ]
-        , paragraph
-            [ Font.center ]
-            [ Input.button
-                Attr.button
-                button
-            ]
-        ]
-
 toSpeedDialList : Maybe OdorikApi.SpeedDial -> List OdorikApi.SpeedDial
 toSpeedDialList s =
     Maybe.withDefault [] <| Maybe.map (\x -> [x]) s
@@ -317,6 +297,6 @@ view req shared m =
         column [ width fill, height fill, spacing 40 ]
             (  parseWarningIfPresent m
             ++ case m.state of
-                NeedLogin -> loginForm m
+                NeedLogin -> Shared.loginForm Login
                 LoggedIn -> callbackForm m
             )
