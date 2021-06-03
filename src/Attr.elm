@@ -121,7 +121,7 @@ spinnerIcon : Int -> Int -> Element msg
 spinnerIcon w h =
     icon w h <|
         image (iconAttr w h)
-            { src = "/icons/sync-alt-solid.svg"
+            { src = "/svg/sync-alt-solid.svg"
             , description = "refresh icon"
             }
 
@@ -129,7 +129,7 @@ spinnerAnimatedIcon : Int -> Int -> Element msg
 spinnerAnimatedIcon w h =
     spinningIcon w h <|
         image (iconAttr w h)
-            { src = "/icons/sync-alt-solid.svg"
+            { src = "/svg/sync-alt-solid.svg"
             , description = "refreshing icon"
             }
 
@@ -137,7 +137,7 @@ checkmarkIcon : Int -> Int -> Element msg
 checkmarkIcon w h =
     icon w h <|
         image (iconAttr w h)
-            { src = "/icons/check-solid.svg"
+            { src = "/svg/check-solid.svg"
             , description = "success icon"
             }
 
@@ -145,7 +145,7 @@ crossIcon : Int -> Int -> Element msg
 crossIcon w h =
     icon w h <|
         image (iconAttr w h)
-            { src = "/icons/times-solid.svg"
+            { src = "/svg/times-solid.svg"
             , description = "failure icon"
             }
 
