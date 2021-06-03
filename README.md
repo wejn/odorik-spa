@@ -18,6 +18,11 @@ npm install -g elm elm-spa
 elm-spa server  # starts this app at http:/localhost:1234
 ```
 
+## Live demo
+
+It is [deployed on odorik.wejn.org](https://odorik.wejn.org/), use testing credentials
+(l/p: `888`) to play with it.
+
 ## Credits
 © 2021 Michal Jirků
 Licensed under GNU AFFERO GENERAL PUBLIC LICENSE, Version 3
