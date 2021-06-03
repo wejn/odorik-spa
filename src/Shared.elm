@@ -234,7 +234,7 @@ labelWithSpinner state label reloadMsg =
     case state of
         Fetching ->
             [ paragraph [ Font.alignLeft ] [ text label ]
-            , paragraph [ Font.alignRight ] [ text "(loading...)" ]
+            , paragraph [ Font.alignRight ] [ Attr.spinnerAnimatedIcon 20 20 ]
             ]
         Ready ->
             case reloadMsg of
@@ -245,10 +245,21 @@ labelWithSpinner state label reloadMsg =
                     [ paragraph [ Font.alignLeft ] [ text label ]
                     , Input.button Attr.linkLikeButton
                         { onPress = Just a
-                        , label = el [ centerX ] <| text "Reload"
+                        , label = Attr.spinnerIcon 20 20
                         }
                     ]
         Error e ->
-            [ paragraph [ Font.alignLeft ] [ text label ]
-            , paragraph [ Font.alignRight ] [ text <| "(error: " ++ e ++ ")" ]
-            ]
+            case reloadMsg of
+                Nothing ->
+                    [ paragraph [ Font.alignLeft ] [ text label ]
+                    , paragraph ( Font.alignRight :: Attr.error ) [ text e ]
+                    , paragraph [ Font.alignRight ] [ Attr.crossIcon 20 20 ]
+                    ]
+                Just a ->
+                    [ paragraph [ Font.alignLeft ] [ text label ]
+                    , paragraph ( Font.alignRight :: Attr.error ) [ text e ]
+                    , Input.button Attr.linkLikeButton
+                        { onPress = Just a
+                        , label = Attr.crossIcon 20 20
+                        }
+                    ]

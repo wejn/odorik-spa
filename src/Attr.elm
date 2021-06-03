@@ -5,6 +5,9 @@ import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Simple.Animation as Animation exposing (Animation)
+import Simple.Animation.Animated as Animated
+import Simple.Animation.Property as P
 
 button : List (Attribute msg)
 button =
@@ -77,4 +80,72 @@ dropdownBackgroundColor selected highlighted =
 
     else
         rgb255 255 255 255
+
+spinAnimation : Animation
+spinAnimation =
+    Animation.steps
+        { startAt = [ P.rotate 0 ]
+        , options = [ Animation.loop, Animation.easeInOutQuad ]
+        }
+        [ Animation.step 500 [ P.rotate 180 ]
+        , Animation.step 650 [ P.rotate 360 ]
+        ]
+
+animatedEl : Animation -> List (Attribute msg) -> Element msg -> Element msg
+animatedEl =
+    Animated.ui
+        { behindContent = Element.behindContent
+        , htmlAttribute = Element.htmlAttribute
+        , html = Element.html
+        }
+        Element.el
+
+iconAttr : Int -> Int -> List (Attribute msg)
+iconAttr w h =
+    [ centerX
+    , centerY
+    , width <| px w
+    , height <| px h
+    ]
+
+icon : Int -> Int -> Element msg -> Element msg
+icon w h =
+    Element.el (iconAttr w h)
+
+
+spinningIcon : Int -> Int -> Element msg -> Element msg
+spinningIcon w h =
+    animatedEl spinAnimation (iconAttr w h)
+
+spinnerIcon : Int -> Int -> Element msg
+spinnerIcon w h =
+    icon w h <|
+        image (iconAttr w h)
+            { src = "/icons/sync-alt-solid.svg"
+            , description = "refresh icon"
+            }
+
+spinnerAnimatedIcon : Int -> Int -> Element msg
+spinnerAnimatedIcon w h =
+    spinningIcon w h <|
+        image (iconAttr w h)
+            { src = "/icons/sync-alt-solid.svg"
+            , description = "refreshing icon"
+            }
+
+checkmarkIcon : Int -> Int -> Element msg
+checkmarkIcon w h =
+    icon w h <|
+        image (iconAttr w h)
+            { src = "/icons/check-solid.svg"
+            , description = "success icon"
+            }
+
+crossIcon : Int -> Int -> Element msg
+crossIcon w h =
+    icon w h <|
+        image (iconAttr w h)
+            { src = "/icons/times-solid.svg"
+            , description = "failure icon"
+            }
 

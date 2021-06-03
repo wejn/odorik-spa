@@ -293,10 +293,23 @@ callbackForm m =
 callbackStateHelper : CallbackState -> Element Msg
 callbackStateHelper c =
     case c of
-        Empty -> row [ width fill ] [ text "" ]
-        Fetching -> row (Attr.info ++ [ width fill ]) [ text "Status: Requesting" ]
-        Success -> row (Attr.success ++ [width fill ]) [ text "Status: Success!" ]
-        Error err -> row (Attr.error ++ [ width fill]) [ text <| "Status: Failure: " ++ err ]
+        Empty ->
+            row [ width fill ] [ text "" ]
+        Fetching ->
+            row [ width fill ]
+                [ paragraph [ Font.alignLeft ] [ text "Requesting callback..." ]
+                , paragraph [ width shrink, Font.alignRight ] [ Attr.spinnerAnimatedIcon 20 20 ]
+                ]
+        Success ->
+            row ( width fill :: Attr.success )
+                [ paragraph [ Font.alignLeft] [ text "Successfully requested." ]
+                , paragraph [ width shrink, Font.alignRight ] [ Attr.checkmarkIcon 20 20 ]
+                ]
+        Error err ->
+            row ( width fill :: Attr.error )
+                [ paragraph [ Font.alignLeft] [ text <| "Failed: " ++ err ]
+                , paragraph [ width shrink, Font.alignRight ] [ Attr.crossIcon 20 20 ]
+                ]
 
 view : Request -> Shared.Model -> Model -> View Msg
 view req shared m =

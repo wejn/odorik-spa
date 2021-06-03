@@ -1,5 +1,6 @@
 module Pages.Home_ exposing (Model, Msg, init, page, update, view)
 
+import Attr
 import Element exposing (..)
 import Element.Input as Input
 import Element.Border as Border
@@ -70,4 +71,8 @@ view req shared m =
         [ paragraph
           []
           [ text "Here be homepage." ]
+        , paragraph [] [ Attr.spinnerAnimatedIcon 50 50 ]
+        , paragraph [] [ Attr.spinnerIcon 50 50 ]
+        , paragraph [] [ Attr.crossIcon 50 50 ]
+        , paragraph [] [ Attr.checkmarkIcon 50 50 ]
         ]
