@@ -114,7 +114,7 @@ view req shared m =
                 , text " for more info)."
                 ]
             , paragraph [ Font.justify ]
-                [ text "3. Add the shortcut to your Home screen (for quick access), by tapping the three dots"
+                [ text "3. Add the shortcut to your Home screen (for quick access), by tapping the three dots "
                 , text "repeatedly until you get "
                 , italic <| text "\"Add to Home screen\""
                 , text "."
