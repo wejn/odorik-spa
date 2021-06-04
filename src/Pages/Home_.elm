@@ -102,7 +102,7 @@ view req shared m =
             , paragraph [ Font.justify ]
                 [ text "1. Login (on your mobile device) "
                 , link Attr.link { label = text "on the Settings page", url = (Route.toHref Route.Settings) }
-                , text "."
+                , text ", using your odorik.cz credentials."
                 ]
             , paragraph [ Font.justify ]
                 [ text "2. Enable third-party Shortcuts on your phone "
