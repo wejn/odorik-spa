@@ -101,7 +101,7 @@ pageMaxWidth = 800
 
 view : Model -> Request -> String -> Element msg -> View msg
 view m req title contents =
-    { title = title
+    { title = title ++ " :: Odorik Callback"
     , attributes =
         [ width <| minimum m.width (maximum pageMaxWidth fill)
         , height <| minimum m.height fill

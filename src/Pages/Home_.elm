@@ -72,7 +72,7 @@ view req shared m =
         source = "https://github.com/wejn/odorik-spa"
         monospaced = (\x -> el [ Font.family [ Font.monospace ], Background.color <| rgb255 242 242 242 ] x)
     in
-    Shared.view shared req "Homepage" <|
+    Shared.view shared req "Home" <|
         column [ width fill, height fill, spacing 20 ]
             [ paragraph [ Font.size 24, Font.bold ]
                 [ text "Introduction" ]
