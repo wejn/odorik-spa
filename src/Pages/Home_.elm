@@ -71,11 +71,12 @@ view req shared m =
         shortcut = "https://www.icloud.com/shortcuts/676a2e2fdb2b40e2ba5c1c182238d54d"
         source = "https://github.com/wejn/odorik-spa"
         monospaced = (\x -> el [ Font.family [ Font.monospace ], Background.color <| rgb255 242 242 242 ] x)
+        italic = (\x -> el [ Font.italic ] x )
+        heading = (\x -> paragraph [ Font.size 24, Font.bold ] [ text x ])
     in
     Shared.view shared req "Home" <|
         column [ width fill, height fill, spacing 20 ]
-            [ paragraph [ Font.size 24, Font.bold ]
-                [ text "Introduction" ]
+            [ heading "Introduction"
             , paragraph [ Font.justify ]
                 [ text "This is a single-page app for initiating callback using "
                 , newTabLink Attr.link { label = text "Odorik.cz API", url = odorikApi }
@@ -97,28 +98,31 @@ view req shared m =
                 , newTabLink Attr.link { label = text "contact selection", url = shortcut }
                 , text " Shortcut (by simply utilizing the Speed Dials), I think you'd be so much worse off without it."
                 ]
-            , paragraph [ Font.size 24, Font.bold ]
-                [ text "Installation" ]
+            , heading "Installation"
             , paragraph [ Font.justify ]
                 [ text "1. Login (on your mobile device) "
                 , link Attr.link { label = text "on the Settings page", url = (Route.toHref Route.Settings) }
                 , text "."
                 ]
             , paragraph [ Font.justify ]
-                [ text "2. Enable third-party Shortcuts on your phone, and download the "
+                [ text "2. Enable third-party Shortcuts on your phone "
+                , italic <| text "(System settings → Shortcuts → Allow Untrusted Shortcuts)"
+                , text ", and download the "
                 , newTabLink Attr.link { label = text "contact selection", url = shortcut }
                 , text " Shortcut (see the "
                 , newTabLink Attr.link { label = text "blog post", url = blogPost }
                 , text " for more info)."
                 ]
             , paragraph [ Font.justify ]
-                [ text "3. Add the shortcut to your Home screen."
+                [ text "3. Add the shortcut to your Home screen (for quick access), by tapping the three dots"
+                , text "repeatedly until you get "
+                , italic <| text "\"Add to Home screen\""
+                , text "."
                 ]
             , paragraph [ Font.justify ]
-                [ text "4. Use it to setup callbacks. (And you can use the site to check balance)"
+                [ text "4. Use the home screen icon to setup callbacks. (And you can use the site to check balance)"
                 ]
-            , paragraph [ Font.size 24, Font.bold ]
-                [ text "Demo credentials" ]
+            , heading "Demo credentials"
             , paragraph [ Font.justify ]
                 [ text "Because it is inevitable that someone randomly bumping into this app doesn't have "
                 , text "\"live\" credentials, but would like to see this app in action, I have hardcoded "
@@ -129,8 +133,7 @@ view req shared m =
                 , el [ Font.bold ] <| text "888"
                 , text "\" for both login and password."
                 ]
-            , paragraph [ Font.size 24, Font.bold ]
-                [ text "Privacy statement" ]
+            , heading "Privacy statement"
             , paragraph [ Font.justify ]
                 [ text "This app deliberately doesn't use cookies, and doesn't track you in any way."
                 ]
@@ -145,16 +148,15 @@ view req shared m =
                 , text " the only thing I could ever see in server logs is the URL "
                 , text "that your browser requests. And because it's an SPA, I only see the initial page load. "
                 , text "Isn't that neat, in this "
-                , el [ Font.italic ] <| text "we will track you to death"
+                , italic <| text "we will track you to death"
                 , text " day and age?"
                 ]
             , paragraph [ Font.justify ]
                 [ text "Don't take my word for it, though. Check the "
                 , newTabLink Attr.link { label = text "source code", url = source }
-                , text " source for yourself, if you so please."
+                , text " for yourself, if you so please."
                 ]
-            , paragraph [ Font.size 24, Font.bold ]
-                [ text "Credit" ]
+            , heading "Credit"
             , paragraph [ Font.justify ]
                 [ text "© 2021 "
                 , newTabLink Attr.link { label = text "Michal Jirků", url = "https://wejn.org/" }
