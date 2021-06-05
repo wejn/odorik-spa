@@ -278,6 +278,8 @@ lineConfig =
                 , padding 8
                 , spacing 10
                 , width fill
+                , Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 }
+                , Border.color <| rgb255 200 200 200
                 ]
                 (text item) )
 

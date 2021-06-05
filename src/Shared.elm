@@ -218,6 +218,8 @@ speedDialToElement attr item =
                 , spacing 10
                 , width fill
                 , Font.size 16
+                , Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 }
+                , Border.color <| rgb255 200 200 200
                 ]
             ++ attr
             )
