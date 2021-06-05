@@ -102,7 +102,9 @@ view req shared m =
             , paragraph [ Font.justify ]
                 [ text "1. Login (on your mobile device) "
                 , link Attr.link { label = text "on the Settings page", url = (Route.toHref Route.Settings) }
-                , text ", using your odorik.cz credentials."
+                , text ", using either your odorik.cz SIP credentials (for a given line), or API credentials"
+                , text " (account-wide API access). The former is safer (more restrictive). "
+                , italic <| text "Note: your normal odorik.cz website login (PIN, 9-digit number+password) will not work."
                 ]
             , paragraph [ Font.justify ]
                 [ text "2. Enable third-party Shortcuts on your phone "
@@ -147,9 +149,9 @@ view req shared m =
                 , monospaced <| text "localStorage"
                 , text " the only thing I could ever see in server logs is the URL "
                 , text "that your browser requests. And because it's an SPA, I only see the initial page load. "
-                , text "Isn't that neat, in this "
+                , text "Isn't that neat, in this \""
                 , italic <| text "we will track you to death"
-                , text " day and age?"
+                , text "\" day and age?"
                 ]
             , paragraph [ Font.justify ]
                 [ text "Don't take my word for it, though. Check the "

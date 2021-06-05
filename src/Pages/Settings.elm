@@ -212,15 +212,19 @@ loginPage model =
             { onChange = ChangeUserName
             , text = model.username
             , label = Input.labelAbove [ Font.alignLeft ] <| text "User name:"
-            , placeholder = Nothing
+            , placeholder = Just <| Input.placeholder [ Font.alignLeft ] <| text "SIP line, or API username"
             }
         , Input.currentPassword ( [htmlAttribute <| Html.Attributes.id "password", Shared.onEnter StartLogin] ++ Attr.input)
             { onChange = ChangePassword
             , text = model.password
             , label = Input.labelAbove [ Font.alignLeft ] <| text "Password:"
-            , placeholder = Nothing
+            , placeholder = Just <| Input.placeholder [ Font.alignLeft ] <| text "SIP or API password"
             , show = False
             }
+        , paragraph [ Font.alignLeft, Font.italic ]
+            [ text "Please note: the PIN (or phone number + password) you use to login to odorik.cz will not work. " ]
+        , paragraph [ Font.alignLeft, Font.italic ]
+            [ text "You need either SIP credentials or API credentials. You can find those in your account/line settings." ]
         , Input.button Attr.button
             { onPress = Just StartLogin
             , label = el [ centerX ] <| text "Login"
