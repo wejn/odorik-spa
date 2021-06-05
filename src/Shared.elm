@@ -57,8 +57,9 @@ type alias IncomingFragment =
 
 type FetchState
     = Fetching
-    | Ready
+    | Idle
     | Error String
+    | Success
 
 init : Request -> Flags -> ( Model, Cmd Msg )
 init _ flags =
@@ -237,7 +238,7 @@ labelWithSpinner state label reloadMsg =
             [ paragraph [ Font.alignLeft ] [ text label ]
             , paragraph [ Font.alignRight ] [ Attr.spinnerAnimatedIcon 20 20 ]
             ]
-        Ready ->
+        Idle ->
             case reloadMsg of
                 Nothing ->
                     [ paragraph [ Font.alignLeft ] [ text label ]
@@ -264,6 +265,10 @@ labelWithSpinner state label reloadMsg =
                         , label = Attr.crossIcon 20 20
                         }
                     ]
+        Success ->
+            [ paragraph [ Font.alignLeft ] [ text label ]
+            , paragraph [ Font.alignRight ] [ Attr.checkmarkIcon 20 20 ]
+            ]
 
 loginForm : msg -> List (Element msg)
 loginForm m =

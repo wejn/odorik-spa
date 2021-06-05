@@ -1,6 +1,7 @@
 module Pages.Callback exposing (Model, Msg, init, page, update, view, changedUrl)
 
 import Attr
+import Delay
 import Dropdown
 import Element exposing (..)
 import Element.Input as Input
@@ -32,12 +33,6 @@ type State
     = LoggedIn
     | NeedLogin
 
-type CallbackState
-    = Empty
-    | Success
-    | Error String
-    | Fetching
-
 type alias Model =
     { state : State
     , parseWarning : Maybe String
@@ -56,7 +51,7 @@ type alias Model =
     , targetDropdownState : Dropdown.State OdorikApi.SpeedDial
     , callerDropdownState : Dropdown.State OdorikApi.SpeedDial
     , speedDials : List OdorikApi.SpeedDial
-    , callbackState : CallbackState
+    , callbackState : Shared.FetchState
     }
 
 init : Request -> Storage -> ( Model, Cmd Msg )
@@ -87,12 +82,12 @@ init req storage =
                 _ -> Nothing )
         , line = OdorikApi.getLine storage.odorikApi
         , balance = Nothing
-        , balanceState = Shared.Fetching
-        , speedDialsState = Shared.Ready
+        , balanceState = Shared.Idle
+        , speedDialsState = Shared.Idle
         , targetDropdownState = Dropdown.init "target-dropdown"
         , callerDropdownState = Dropdown.init "caller-dropdown"
         , speedDials = OdorikApi.getSpeedDials storage.odorikApi
-        , callbackState = Empty
+        , callbackState = Shared.Idle
         }
     , Cmd.batch
         [ Task.succeed StartBalanceFetch |> Task.perform identity
@@ -105,17 +100,20 @@ type Msg
     | Login
     | StartBalanceFetch
     | GotBalance (OdorikApi.ApiResponse String)
+    | FinishBalanceFetch
     | TargetPicked (Maybe OdorikApi.SpeedDial)
     | CallerPicked (Maybe OdorikApi.SpeedDial)
     | TargetDropdownMsg (Dropdown.Msg OdorikApi.SpeedDial)
     | CallerDropdownMsg (Dropdown.Msg OdorikApi.SpeedDial)
     | StartSpeedDialsFetch
     | SpeedDialsFetched (OdorikApi.ApiResponse (List OdorikApi.SpeedDial))
+    | FinishSpeedDialsFetch
     | TargetEdited String
     | CallerEdited String
     | ChangedUrl Url
     | StartCallback
     | GotCallback (OdorikApi.ApiResponse String)
+    | FinishCallback
 
 changedUrl : Url -> Msg
 changedUrl u = ChangedUrl u
@@ -126,9 +124,13 @@ update req storage msg model =
         None -> ( model , Cmd.none )
         Login -> ( model, Request.pushRoute Route.Settings req )
         StartBalanceFetch -> ( { model | balanceState = Shared.Fetching } , OdorikApi.fetchBalance storage.odorikApi GotBalance )
-        GotBalance (Ok b) -> ( { model | balanceState = Shared.Ready, balance = Just b } , Cmd.none)
+        GotBalance (Ok b) -> ( { model | balanceState = Shared.Success, balance = Just b } , Delay.after 2000 FinishBalanceFetch)
         GotBalance (Err err) -> ( { model | balanceState = Shared.Error <| OdorikApi.errorToString err, balance = Nothing  } , Cmd.none)
         TargetPicked t -> ( { model | target = t, manualTarget = Nothing, targetText = Maybe.withDefault "" (Maybe.map .number t) }, Cmd.none )
+        FinishBalanceFetch ->
+            case model.balanceState of
+                Shared.Success -> ({ model | balanceState = Shared.Idle }, Cmd.none)
+                _ -> ( model , Cmd.none )
         TargetDropdownMsg sm ->
             let
                 ( state , cmd ) =
@@ -147,7 +149,16 @@ update req storage msg model =
         SpeedDialsFetched (Err err) ->
             ( { model | speedDialsState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         SpeedDialsFetched (Ok a) ->
-            ( { model | speedDialsState = Shared.Ready, speedDials = a } , Storage.saveSpeedDials storage None a )
+            ( { model | speedDialsState = Shared.Success, speedDials = a }
+            , Cmd.batch
+                [ Storage.saveSpeedDials storage None a
+                , Delay.after 2000 FinishSpeedDialsFetch
+                ]
+            )
+        FinishSpeedDialsFetch ->
+            case model.speedDialsState of
+                Shared.Success -> ({ model | speedDialsState = Shared.Idle }, Cmd.none)
+                _ -> ( model , Cmd.none )
         TargetEdited s ->
             let
                 tgt = Just <| Shared.stringToManualSpeedDial s
@@ -174,17 +185,21 @@ update req storage msg model =
             , Cmd.none )
         StartCallback ->
                         if String.isEmpty model.targetText || String.isEmpty model.callerText then
-                            ( { model | callbackState = Error "need both target and caller filled out" }, Cmd.none )
+                            ( { model | callbackState = Shared.Error "need both target and caller filled out" }, Cmd.none )
                         else
                             if model.targetText == model.callerText then
-                                ( { model | callbackState = Error "need different target and caller" }, Cmd.none )
+                                ( { model | callbackState = Shared.Error "need different target and caller" }, Cmd.none )
                             else
-                                ( { model | callbackState = Fetching }
+                                ( { model | callbackState = Shared.Fetching }
                                 , OdorikApi.requestCallback storage.odorikApi model.targetText model.callerText model.line GotCallback )
         GotCallback (Err err) ->
-            ( { model | callbackState = Error <| OdorikApi.errorToString err } , Cmd.none )
+            ( { model | callbackState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         GotCallback (Ok a) ->
-            ( { model | callbackState = Success } , Cmd.none )
+            ( { model | callbackState = Shared.Success } , Delay.after 5000 FinishCallback )
+        FinishCallback ->
+            case model.callbackState of
+                Shared.Success -> ({ model | callbackState = Shared.Idle }, Cmd.none)
+                _ -> ( model , Cmd.none )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -270,22 +285,22 @@ callbackForm m =
         ]
     ]
 
-callbackStateHelper : CallbackState -> Element Msg
+callbackStateHelper : Shared.FetchState -> Element Msg
 callbackStateHelper c =
     case c of
-        Empty ->
+        Shared.Idle ->
             row [ width fill ] [ text "" ]
-        Fetching ->
+        Shared.Fetching ->
             row [ width fill ]
                 [ paragraph [ Font.alignLeft ] [ text "Requesting callback..." ]
                 , paragraph [ width shrink, Font.alignRight ] [ Attr.spinnerAnimatedIcon 20 20 ]
                 ]
-        Success ->
+        Shared.Success ->
             row ( width fill :: Attr.success )
                 [ paragraph [ Font.alignLeft] [ text "Successfully requested." ]
                 , paragraph [ width shrink, Font.alignRight ] [ Attr.checkmarkIcon 20 20 ]
                 ]
-        Error err ->
+        Shared.Error err ->
             row ( width fill :: Attr.error )
                 [ paragraph [ Font.alignLeft] [ text <| "Failed: " ++ err ]
                 , paragraph [ width shrink, Font.alignRight ] [ Attr.crossIcon 20 20 ]

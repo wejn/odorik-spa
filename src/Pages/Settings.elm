@@ -2,6 +2,7 @@ module Pages.Settings exposing (Model, Msg, init, page, update, view)
 
 import Attr
 import Browser.Dom as Dom
+import Delay
 import Dropdown
 import Element exposing (..)
 import Element.Background as Background
@@ -80,11 +81,11 @@ init req storage =
             , callerDropdownState = Dropdown.init "caller-dropdown"
             , line = OdorikApi.getLine storage.odorikApi
             , lineDropdownState = Dropdown.init "line-dropdown"
-            , callersState = Shared.Fetching
+            , callersState = Shared.Idle
             , callers = []
-            , linesState = Shared.Fetching
+            , linesState = Shared.Idle
             , lines = OdorikApi.getLine storage.odorikApi |> Maybe.map (\x -> [x]) |> Maybe.withDefault []
-            , speedDialsState = Shared.Fetching
+            , speedDialsState = Shared.Idle
             , speedDials = OdorikApi.getSpeedDials storage.odorikApi
             }
     in
@@ -107,10 +108,13 @@ type Msg
     | LineDropdownMsg (Dropdown.Msg String)
     | StartLinesFetch
     | LinesFetched (OdorikApi.ApiResponse (List String))
+    | FinishLinesFetch
     | StartCallersFetch
     | CallersFetched (OdorikApi.ApiResponse (List OdorikApi.SpeedDial))
+    | FinishCallersFetch
     | StartSpeedDialsFetch
     | SpeedDialsFetched (OdorikApi.ApiResponse (List OdorikApi.SpeedDial))
+    | FinishSpeedDialsFetch
     | CallerEdited String
 
 
@@ -152,23 +156,49 @@ update req storage msg model =
         LinesFetched (Err err) ->
             ( { model | linesState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         LinesFetched (Ok a) ->
+            let
+                newModel = { model | linesState = Shared.Success, lines = a }
+                finish = Delay.after 2000 FinishLinesFetch
+            in
             case (model.line, a) of
                 (Nothing, [first]) ->
-                    ( { model | linesState = Shared.Ready, lines = a, line = Just first } , Storage.saveLine storage None (Just first) )
+                    ( { newModel | line = Just first }
+                    , Cmd.batch
+                        [ Storage.saveLine storage None (Just first)
+                        , finish
+                        ]
+                    )
                 _ ->
-                    ( { model | linesState = Shared.Ready, lines = a } , Cmd.none )
+                    ( newModel , finish )
+        FinishLinesFetch ->
+            case model.linesState of
+                Shared.Success -> ({ model | linesState = Shared.Idle }, Cmd.none)
+                _ -> ( model , Cmd.none )
         StartCallersFetch ->
             ( { model | callersState = Shared.Fetching } , OdorikApi.fetchCallers storage.odorikApi CallersFetched )
         CallersFetched (Err err) ->
             ( { model | callersState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         CallersFetched (Ok a) ->
-            ( { model | callersState = Shared.Ready, callers = a } , Cmd.none )
+            ( { model | callersState = Shared.Success, callers = a } , Delay.after 2000 FinishCallersFetch )
+        FinishCallersFetch ->
+            case model.callersState of
+                Shared.Success -> ({ model | callersState = Shared.Idle }, Cmd.none)
+                _ -> ( model , Cmd.none )
         StartSpeedDialsFetch ->
             ( { model | speedDialsState = Shared.Fetching } , OdorikApi.fetchSpeedDials storage.odorikApi SpeedDialsFetched )
         SpeedDialsFetched (Err err) ->
             ( { model | speedDialsState = Shared.Error <| OdorikApi.errorToString err } , Cmd.none )
         SpeedDialsFetched (Ok a) ->
-            ( { model | speedDialsState = Shared.Ready, speedDials = a } , Storage.saveSpeedDials storage None a )
+            ( { model | speedDialsState = Shared.Success, speedDials = a }
+            , Cmd.batch
+                [ Storage.saveSpeedDials storage None a
+                , Delay.after 2000 FinishSpeedDialsFetch
+                ]
+            )
+        FinishSpeedDialsFetch ->
+            case model.speedDialsState of
+                Shared.Success -> ({ model | speedDialsState = Shared.Idle }, Cmd.none)
+                _ -> ( model , Cmd.none )
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
